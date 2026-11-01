@@ -5,9 +5,10 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { DOMParser } from "npm:linkedom@0.18.5";
 
-const CORE_URL = "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/COMMIT_SHA/supabase/functions/afqe-parse/core.js";
+// core.js is imported statically below, pinned to a commit SHA
+// static import (bundled at deploy time), pinned to a commit — Supabase's runtime doesn't allow dynamic remote imports
+import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/__SHA__/supabase/functions/afqe-parse/core.js";
 (globalThis as any).DOMParser = DOMParser;
-const core = await import(CORE_URL);
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
 

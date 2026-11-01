@@ -7,7 +7,7 @@ import { DOMParser } from "npm:linkedom@0.18.5";
 
 // core.js is imported statically below, pinned to a commit SHA
 // static import (bundled at deploy time), pinned to a commit — Supabase's runtime doesn't allow dynamic remote imports
-import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/8aa3bd11ce7ab7ca19b5246915be84191a98c727/supabase/functions/afqe-parse/core.js";
+import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/c2c488bd28c345cf464684266de4e651b7ffb361/supabase/functions/afqe-parse/core.js";
 (globalThis as any).DOMParser = DOMParser;
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       const xi = core.parseExchange(it.exch, o, checks);
       o.sector_type = core.sectorFromIndustry(o._industry);
       delete o._prices;
-      o._about = String(o._about || "").slice(0, 600);
+      o._about = String(o._about || "").slice(0, 1500);
       for (const k of Object.keys(o)) if (typeof o[k] === "number" && !isFinite(o[k])) o[k] = null;
       out.push({ symbol: sym, row: o, checks, issues: hs.issues.concat(xi), crit: [], err: null });
     } catch (e) {

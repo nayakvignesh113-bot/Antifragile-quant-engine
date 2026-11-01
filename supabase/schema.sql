@@ -165,3 +165,26 @@ end $$;
 
 revoke all on function public.afqe_fetch(text,text,int), public.afqe_screener(text), public.afqe_exchange(text,boolean), public.afqe_api(text,text,text) from public, anon, authenticated;
 grant execute on function public.afqe_fetch(text,text,int), public.afqe_screener(text), public.afqe_exchange(text,boolean), public.afqe_api(text,text,text) to service_role;
+
+-- ===================== Market-wide scan =====================
+create table if not exists afqe.universe(symbol text primary key, name text, isin text, series text, listed date, active boolean default true, last_fetch timestamptz, last_status text, fails int default 0);
+create table if not exists afqe.raw(symbol text primary key, scr jsonb, exch jsonb, fetched_at timestamptz default now(), parsed boolean default false);
+create table if not exists afqe.rows(symbol text primary key, row jsonb, checks jsonb, issues jsonb, crit jsonb, err text, parsed_at timestamptz default now());
+create table if not exists afqe.rows_hist(symbol text, month date, row jsonb, parsed_at timestamptz, primary key(symbol, month));  -- first snapshot per month: the track record
+grant all on afqe.universe, afqe.raw, afqe.rows, afqe.rows_hist to service_role;
+
+-- public.afqe_load_universe(): loads NSE's EQUITY_L.csv (nsearchives.nseindia.com) into afqe.universe; weekly.
+-- public.afqe_scan_batch(n): fetches the n most overdue EQ/BE symbols (never-fetched first; refresh every 7 days,
+--   backing off on repeated failures) via afqe_screener + afqe_exchange into afqe.raw, and blanks the bulky
+--   cached pages. Rows are blanked/marked rather than deleted.
+-- public.afqe_parse_queue(token, lim) / public.afqe_parse_store(token, items): queue and write-back for the
+--   afqe-parse edge function (supabase/functions/afqe-parse), which parses with core.js generated from index.html.
+-- public.afqe_scan_page(off, lim): meta (coverage, 24 h health) + rows for the Market scan tab;
+--   also reachable as afqe_api(token,'scan',page).
+-- Full definitions: see the live project (pg_get_functiondef) — kept in sync with the migrations named afqe_scan_*.
+
+-- Schedules (pg_cron + pg_net):
+--   afqe-scan       */10 * * * *  select public.afqe_scan_batch(5);
+--   afqe-parse      5-55/10 * * * *  net.http_post(<project>/functions/v1/afqe-parse, header x-afqe-token)
+--   afqe-universe   20 1 * * 0    select public.afqe_load_universe();
+--   afqe-cache-trim 40 * * * *    update afqe.cache set body = null, status = 0 where fetched_at < now() - interval '13 hours' and body is not null;

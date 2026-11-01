@@ -21,6 +21,16 @@ A screening and position-sizing tool for Indian listed equities, built on Sajal 
 8. **Barbell sizing.** Safe / core / convex, with sector caps.
 9. **Signal Lab.** Price signals get weight only if they pass in-sample and out-of-sample rank-IC tests.
 
+## Market scan
+
+- **Coverage:** the backend works through every NSE equity, about 2,590 EQ and BE symbols. It fetches 5 companies every 10 minutes, so the first full pass takes about 3.5 days, and each company is refreshed weekly.
+- **Storage:** it keeps one engine row per company.
+- **Scoring:** the **Market scan** tab downloads those rows and scores them with your current Settings.
+- **Track record:** the first snapshot of each month is kept, so the engine's actual hit rate can be measured once the snapshots are 6–12 months old. Until then, P(beat) and E[ret] are uncalibrated model outputs.
+- **Health check:** a scan banner turns red if more than 25% of the last 24 hours' parses fail on a core table, which usually means a source changed its layout.
+
+The scanner's parser (`supabase/functions/afqe-parse/core.js`) is generated from `index.html` by `tools/build_edge.js`, so the page and the scanner can't drift apart.
+
 ## Data
 
 Type NSE symbols or company names, comma-separated, and press **Fetch**:

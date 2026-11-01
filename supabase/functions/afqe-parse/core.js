@@ -79,7 +79,7 @@ o._about=about.slice(0,1200);o._prices=ts.map((t,i)=>fin(closes[i])?{date:new Da
 return{o,checks}}
 const NEED={top:['Market Cap','Current Price'],profit_loss:['Sales','Operating Profit','Interest','Depreciation','Profit before tax','Net Profit'],quarters:['Sales','Operating Profit','OPM %'],balance_sheet:['Equity Capital','Reserves','Borrowings','Fixed Assets','CWIP'],cash_flow:['Cash from Operating Activity'],ratios:['ROCE %','Debtor Days'],shareholding:['Promoters','DIIs','No. of Shareholders']};
 const CRIT={profit_loss:['Sales'],top:['Market Cap']};
-function screenerHealth(j){const issues=[],crit=[];
+function screenerHealth(j){const issues=[],crit=[];{const PLx=tbl(j.profit_loss);if(PLx&&!PLx.rows['Sales']&&(PLx.rows['Revenue']||PLx.rows['Financing Profit']))return{issues,crit,financial:true}}
 for(const sec in NEED){if(sec==='top'){for(const k of NEED.top){if(!new RegExp(k.replace('/','\\/')).test(j.top||'')){(CRIT.top&&CRIT.top.includes(k)?crit:issues).push(`top ratios: "${k}"`)}}continue}
 const T=tbl(j[sec]);if(!T){(CRIT[sec]?crit:issues).push(`${sec.replace('_',' ')} table not found`);continue}
 if(sec==='profit_loss'&&T.cols.filter(c=>c!=='TTM').length<6)issues.push('profit & loss: fewer than 6 years of columns');

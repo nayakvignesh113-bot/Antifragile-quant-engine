@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
     try {
       const j = it.scr;
       const hs = core.screenerHealth(j);
+      if (hs.financial) { out.push({ symbol: sym, row: null, issues: [], crit: [], err: "financial (bank-style accounts): not modelled" }); continue; }
       if (hs.crit.length) { out.push({ symbol: sym, row: null, issues: hs.issues, crit: hs.crit, err: "layout: " + hs.crit.join(", ") }); continue; }
       const { o, checks } = core.fromScreener(j, String(j.symbol || sym).toUpperCase(), "other");
       const xi = core.parseExchange(it.exch, o, checks);

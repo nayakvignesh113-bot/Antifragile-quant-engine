@@ -22,6 +22,12 @@ const COLS=[
 ['dii_chg_1y','num','Change in DII holding, 1 yr, pp'],['retail_chg_1y','num','Change in number of public shareholders, 1 yr, %'],
 ['rev_q','num','Latest quarter revenue'],['rev_pq','num','Previous quarter revenue'],['rev_ly','num','Same quarter last year revenue'],
 ['ebitdam_q','num','Latest quarter EBITDA margin, %'],['ebitdam_pq','num','Previous quarter EBITDA margin, %'],['ebitdam_ly','num','Same quarter last year EBITDA margin, %'],
+['g_q0','num','Sales YoY growth, latest quarter, %'],['g_q1','num','Sales YoY growth, 1 quarter earlier, %'],['g_q2','num','Sales YoY growth, 2 quarters earlier, %'],['g_q3','num','Sales YoY growth, 3 quarters earlier, %'],
+['opg_q0','num','Operating profit YoY growth, latest quarter, %'],['opg_q2','num','Operating profit YoY growth, 2 quarters earlier, %'],
+['fixed_cost_pct','num','Semi-fixed costs (employee + manufacturing + other + depreciation), % of sales'],['opm_fy','num','Operating margin, latest FY, %'],['opm_3y','num','Operating margin 3 FYs ago, %'],['incr_margin_3y','num','Incremental operating margin over 3 yrs (ΔOP ÷ Δsales), %'],['dol_1y','num','Degree of operating leverage, latest FY (%ΔEBIT ÷ %Δsales)'],
+['asset_turn','num','Sales ÷ net block, latest FY'],['asset_turn_peak','num','Best sales ÷ net block, last 5 FYs'],['cap_growth_3y','num','Growth in net block + CWIP, 3 yrs, %'],
+['pe','num','P/E'],['peer_n','num','Companies in the industry median'],['peer_pe_med','num','Industry median P/E'],['peer_roce_med','num','Industry median ROCE, %'],['peer_sg_med','num','Industry median quarterly sales growth YoY, %'],['peer_pg_med','num','Industry median quarterly profit growth YoY, %'],['own_sg_q','num','Own quarterly sales growth YoY (peer basis), %'],['own_pg_q','num','Own quarterly profit growth YoY (peer basis), %'],['roce_peer_rank','num','ROCE rank among listed peers (1 = best)'],['peer_listed','num','Listed peers shown'],
+['nm_name','text','New market / product being entered'],['nm_stage','num','New-market evidence stage 0–5 (0 none · 1 announced · 2 capex committed · 3 plant built / qualification · 4 first commercial revenue · 5 >10% of revenue)'],['nm_share','num','Expected share of revenue at maturity, %'],['nm_date','text','Date first commercial revenue is expected YYYY-MM-DD'],['nm_evidence','text','Evidence (link or note)'],
 ['held','num','1 if you own it'],['avg_cost','num','Your average cost'],['milestone','text','Thesis milestone (e.g. "Plant 2 utilisation > 60%")'],['milestone_date','text','Milestone due date YYYY-MM-DD'],['milestone_met','num','1 if met'],['thesis_broken','num','1 if the original reason no longer holds'],
 ['q_tech','num','Thiel: proprietary tech, 0–2'],['q_network','num','Thiel: network effects, 0–2'],['q_scale','num','Thiel: scale economies, 0–2'],['q_brand','num','Thiel: brand, 0–2'],
 ['q_diversity','num','Greene/Kapoor: many suppliers, customers, products, markets, 0–2'],['q_portable','num','Capability carries over to other sectors (platform, not pipeline), 0–2'],
@@ -72,11 +78,30 @@ dii_chg_1y:R1(shv('DIIs',0)-shv('DIIs',4)),retail_chg_1y:R1((shv('No. of Shareho
 rev_q:R0(tv(Q,'Sales',qc[qc.length-1])),rev_pq:R0(tv(Q,'Sales',qc[qc.length-2])),rev_ly:R0(tv(Q,'Sales',qc[qc.length-5])),
 ebitdam_q:tv(Q,'OPM %',qc[qc.length-1]),ebitdam_pq:tv(Q,'OPM %',qc[qc.length-2]),ebitdam_ly:tv(Q,'OPM %',qc[qc.length-5]),
 held:NaN,avg_cost:NaN,milestone:'',milestone_date:'',milestone_met:NaN,thesis_broken:NaN};
+// rate of change (quarterly YoY) and operating leverage
+const qv=(r,i)=>tv(Q,r,qc[qc.length-1-i]);const yoy=(r,i)=>{const a=qv(r,i),b=qv(r,i+4);return fin(a)&&fin(b)&&b>0?R1((a/b-1)*100):NaN};
+o.g_q0=yoy('Sales',0);o.g_q1=yoy('Sales',1);o.g_q2=yoy('Sales',2);o.g_q3=yoy('Sales',3);o.opg_q0=yoy('Operating Profit',0);o.opg_q2=yoy('Operating Profit',2);
+const opm=c=>{const a=s('Operating Profit',c),b=sales(c);return fin(a)&&fin(b)&&b>0?a/b*100:NaN};o.opm_fy=R1(opm(Y(0)));o.opm_3y=R1(opm(Y(3)));
+{const dS=sales(Y(0))-sales(Y(3)),dO=s('Operating Profit',Y(0))-s('Operating Profit',Y(3));o.incr_margin_3y=fin(dS)&&fin(dO)&&sales(Y(3))>0&&dS/sales(Y(3))>=0.1?R1(dO/dS*100):NaN}
+{const gS=sales(Y(0))/sales(Y(1))-1,e0=ebit(Y(0)),e1=ebit(Y(1));o.dol_1y=fin(gS)&&Math.abs(gS)>=0.05&&fin(e0)&&fin(e1)&&e1>0?R1((e0/e1-1)/gS):NaN}
+{const sch=k=>j.schedules?sv(j.schedules,k,Y(0)):NaN;const fx=['Employee Cost %','Manufacturing Cost %','Other Cost %'].map(sch);const dep=s('Depreciation',Y(0))/sales(Y(0))*100;o.fixed_cost_pct=fx.every(fin)&&fin(dep)?R1(fx[0]+fx[1]+fx[2]+dep):NaN}
+{const fa=c=>tv(BS,'Fixed Assets',c),cw=c=>tv(BS,'CWIP',c);const at=[0,1,2,3,4].map(k=>{const c=Y(k);return c&&fin(fa(c))&&fa(c)>0&&fin(sales(c))?sales(c)/fa(c):NaN}).filter(fin);
+o.asset_turn=fin(fa(Y(0)))&&fa(Y(0))>0?Math.round(sales(Y(0))/fa(Y(0))*100)/100:NaN;o.asset_turn_peak=at.length?Math.round(Math.max(...at)*100)/100:NaN;
+const c0=fa(Y(0))+(cw(Y(0))||0),c3=fa(Y(3))+(cw(Y(3))||0);o.cap_growth_3y=fin(c0)&&fin(c3)&&c3>0?R0((c0/c3-1)*100):NaN}
+o.pe=fin(top['Stock P/E'])?top['Stock P/E']:NaN;Object.assign(o,parsePeers(j.peers,mcap));if(o._peers&&!o._peers.length)delete o._peers;
+o._ann=Array.isArray(j.announcements)?j.announcements.slice(0,6):[];
 for(const [k,t] of COLS)if(!(k in o))o[k]=t==='num'?NaN:'';
 checks.push(`Source: Screener ${j.consolidated?'consolidated':'standalone'} · FY ${Y(0)}${j.cached?' · cached '+String(j.fetched_at||'').slice(0,16).replace('T',' '):''}`);
 if(!fin(gm(Y(0))))checks.push('Gross margin unavailable (no material-cost breakdown)');
 o._about=about.slice(0,1200);o._prices=ts.map((t,i)=>fin(closes[i])?{date:new Date(t*1000).toISOString().slice(0,10),ticker:sym,close:closes[i]}:null).filter(Boolean);
 return{o,checks}}
+function parsePeers(html,mcap){const out={};if(!html)return out;const d=new DOMParser().parseFromString(html.replace(/^\s*<table>|<\/table>\s*$/g,'').replace(/^/,'<table>')+'</table>','text/html');const trs=[...d.querySelectorAll('tr')];if(!trs.length)return out;
+const head=[...trs[0].querySelectorAll('th,td')].map(x=>x.textContent.replace(/\s+/g,' ').trim());const ci=re=>head.findIndex(h=>re.test(h));const iN=ci(/^Company/),iPE=ci(/^P\/E/),iMC=ci(/^Mar Cap/),iPG=ci(/^Qtr Profit Var/),iSG=ci(/^Qtr Sales Var/),iR=ci(/^ROCE/);if(iPE<0||iR<0)return out;
+const rows=[];let med=null;for(const tr of trs.slice(1)){const c=[...tr.querySelectorAll('td,th')].map(x=>x.textContent.replace(/\s+/g,' ').trim());if(!c.length)continue;const m=c.join(' ').match(/Median:\s*(\d+)\s*Co/);
+if(m){const off=head.length-c.length;const g=i=>i-off>=0?num(c[i-off]):NaN;med={n:+m[1],pe:g(iPE),roce:g(iR),sg:g(iSG),pg:g(iPG)};continue}
+rows.push({n:c[iN]||'',pe:num(c[iPE]),mc:num(c[iMC]),pg:num(c[iPG]),sg:num(c[iSG]),roce:num(c[iR])})}
+if(fin(mcap)&&rows.length){let bi=-1,bd=1e9;rows.forEach((r,i)=>{const dd=Math.abs(r.mc/mcap-1);if(fin(dd)&&dd<bd){bd=dd;bi=i}});if(bi>=0&&bd<0.05){rows[bi].self=true;out.own_sg_q=rows[bi].sg;out.own_pg_q=rows[bi].pg;const rs=rows.filter(r=>fin(r.roce)).sort((a,b)=>b.roce-a.roce);out.roce_peer_rank=rs.indexOf(rows[bi])+1||NaN}}
+out.peer_listed=rows.length;out._peers=rows.slice(0,10);if(med){out.peer_n=med.n;out.peer_pe_med=med.pe;out.peer_roce_med=med.roce;out.peer_sg_med=med.sg;out.peer_pg_med=med.pg}return out}
 const NEED={top:['Market Cap','Current Price'],profit_loss:['Sales','Operating Profit','Interest','Depreciation','Profit before tax','Net Profit'],quarters:['Sales','Operating Profit','OPM %'],balance_sheet:['Equity Capital','Reserves','Borrowings','Fixed Assets','CWIP'],cash_flow:['Cash from Operating Activity'],ratios:['ROCE %','Debtor Days'],shareholding:['Promoters','DIIs','No. of Shareholders']};
 const CRIT={profit_loss:['Sales'],top:['Market Cap']};
 function screenerHealth(j){const issues=[],crit=[];{const PLx=tbl(j.profit_loss);if(PLx&&!PLx.rows['Sales']&&(PLx.rows['Revenue']||PLx.rows['Financing Profit']))return{issues,crit,financial:true}}

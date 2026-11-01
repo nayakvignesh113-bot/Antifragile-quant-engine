@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Antifragile Quant Engine</title>
+<style>
+:root{--ink:#111;--mut:#666;--line:#ddd;--bg:#fff;--soft:#f5f5f3;--acc:#1d4ed8;--bad:#b91c1c;--ok:#15803d;--warn:#a16207;--pur:#6d28d9}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 -apple-system,Segoe UI,Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+header{padding:14px 16px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font:700 19px "Times New Roman",Times,serif}
+header p{margin:2px 0 0;color:var(--mut);font-size:12.5px}
+nav{display:flex;gap:4px;overflow-x:auto;padding:8px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:5}
+nav button{border:1px solid var(--line);background:#fff;padding:6px 11px;border-radius:6px;cursor:pointer;white-space:nowrap;font-size:13px}
+nav button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+main{padding:14px 16px;max-width:1200px;margin:auto}
+section{display:none}section.on{display:block}
+h2{font:700 17px "Times New Roman",serif;margin:6px 0 8px}
+h3{font-size:14px;margin:14px 0 6px}
+.card{border:1px solid var(--line);border-radius:8px;padding:12px;margin:10px 0;background:#fff}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+button.b{border:1px solid var(--ink);background:var(--ink);color:#fff;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+button.g{border:1px solid var(--line);background:#fff;color:var(--ink);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:13px}
+textarea{width:100%;min-height:90px;font:12px ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:6px;padding:8px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{padding:6px 8px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap}
+th{background:var(--soft);font-weight:600}
+td:first-child,th:first-child,td.l,th.l{text-align:left}
+td.wrap{white-space:normal;min-width:240px}
+tr.click{cursor:pointer}tr.click:hover{background:#fafaf5}
+.pill{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11.5px;font-weight:600;border:1px solid}
+.CORE{color:var(--ok);border-color:var(--ok)}.CONVEX{color:var(--acc);border-color:var(--acc)}.WATCH{color:var(--warn);border-color:var(--warn)}.AVOID{color:var(--bad);border-color:var(--bad)}.TRIM{color:var(--pur);border-color:var(--pur)}.EXIT{color:#fff;background:var(--bad);border-color:var(--bad)}
+.mut{color:var(--mut)}.small{font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px}
+.grid label{font-size:12px;color:var(--mut);display:block}
+.grid input,.grid select{width:100%;padding:5px 7px;border:1px solid var(--line);border-radius:5px;font-size:13px}
+.kpi{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.kpi div{border:1px solid var(--line);border-radius:8px;padding:8px}
+.kpi b{display:block;font-size:20px;font-family:"Times New Roman",serif}
+.kpi span{font-size:11.5px;color:var(--mut)}
+canvas{width:100%;border:1px solid var(--line);border-radius:8px;background:#fff}
+.note{background:var(--soft);border-left:3px solid var(--ink);padding:8px 10px;font-size:12.5px;margin:8px 0}
+.flag{color:var(--bad)}.good{color:var(--ok)}.warn{color:var(--warn)}
+#detail{display:none}
+.chk{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px 14px;font-size:12.5px}
+.chk label{display:flex;justify-content:space-between;gap:8px;align-items:center;border-bottom:1px dotted #e5e5e5;padding:3px 0}
+.chk select{font-size:12px}
+.five{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.five div{border:1px solid var(--line);border-radius:8px;padding:8px;font-size:12.5px}
+.five b{display:block;margin-bottom:2px}
+.hb{border:1px solid var(--bad);background:#fef2f2;color:#7f1d1d;border-radius:8px;padding:9px 11px;font-size:12.5px;margin:6px 0}.hb.okb{border-color:var(--ok);background:#f0fdf4;color:#14532d}.hb b{display:block;margin-bottom:2px}
+ul,ol{margin:4px 0 4px 18px;padding:0}
+li{margin:2px 0}
+code{font-size:12px;background:var(--soft);padding:0 3px;border-radius:3px}
+.seg{display:inline-flex;border:1px solid var(--ink);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:#fff;padding:6px 10px;font-size:12.5px;cursor:pointer}
+.seg button.on{background:var(--ink);color:#fff}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+<header>
+<h1>Antifragile Quant Engine</h1>
+<p>Sajal Kapoor's SV curve · net margin of safety · regret minimisation · capital-lag · kill switch — with Taleb, Mauboussin, Thiel, Greene and a Simons-style signal test</p>
+</header>
+<nav id="nav">
+<button data-s="data" class="on">1 · Data</button>
+<button data-s="map">2 · SV Map</button>
+<button data-s="recs">3 · Decisions</button>
+<button data-s="port">4 · Barbell</button>
+<button data-s="lab">5 · Signal Lab</button>
+<button data-s="set">Settings</button>
+<button data-s="about">Method</button>
+</nav>
+<main>
+
+<section id="data" class="on">
+<div id="healthBanner"></div>
+<h2>Load data</h2>
+<div class="note">Everything runs in your browser. <b>The demo is synthetic</b>: fictional tickers DMO01…DMO20, built to exercise every rule, with prices that carry a deliberately planted momentum effect.</div>
+<div class="card"><h3>Your primary regret (sets sizing, entry and stop rules)</h3>
+<div class="seg" id="regretSeg"><button data-r="own">Not owning enough</button><button data-r="overpay">Overpaying &amp; losing</button></div>
+<p class="small mut" id="regretTxt"></p></div>
+<div class="row"><button class="b" id="demo">Load synthetic demo</button><button class="g" id="tplF">Copy fundamentals template</button><button class="g" id="tplP">Copy prices template</button><span id="copyMsg" class="mut small"></span></div>
+<div class="card" id="autoCard">
+<h3>Automatic: type tickers, everything fills in</h3>
+<p class="small mut">NSE symbols, comma-separated (e.g. <code>LAURUSLABS, NEULANDLAB, SANSERA</code>). Pulls 12 years of financials, quarters, shareholding and cost breakdown from Screener's public pages; promoter pledge, industry and filed quarterly results from BSE (used to verify Screener); and 10 years of monthly prices from Yahoo (also fed to the Signal Lab) — all through your Supabase project. If any source changes its layout, a red warning names exactly what couldn't be read. Results are cached for 12 hours. Claude then drafts the judgement scores with a reason for each, for you to accept or edit.</p>
+<div class="row"><input id="aTick" style="flex:1;min-width:220px;padding:7px;border:1px solid var(--line);border-radius:6px" placeholder="LAURUSLABS, NEULANDLAB"><label class="small">Sector <select id="aSector"></select></label><button class="b" id="aGo">Fetch</button><label class="small"><input type="checkbox" id="aDraft" checked> Claude drafts judgement</label></div>
+<div id="aTok" class="row small" style="margin-top:6px;display:none"><span>Access token</span><input id="aTokIn" type="password" style="flex:1;min-width:200px;padding:6px;border:1px solid var(--line);border-radius:6px" placeholder="afqe_…"><button class="g" id="aTokSave">Save</button><span class="mut">Stored only in this browser.</span></div>
+<div id="aMsg" class="small mut" style="margin-top:6px"></div>
+</div>
+<div class="card">
+<h3>Or: Screener.in Excel exports</h3>
+<p class="small mut">On Screener, open a company → <b>Export to Excel</b>. Add one or many files here; each becomes a row below (replacing the same company if already loaded). Screener doesn't carry shareholding, pledge or your judgement, so those score neutral until you add them — edit the row in the box below and press "Use pasted fundamentals", or use the checklist in Decisions.</p>
+<div class="row"><label class="small">Sector type for these files <select id="xSector"></select></label><input type="file" id="xFile" accept=".xlsx,.xls" multiple></div>
+<div id="xMsg" class="small mut"></div>
+</div>
+<div class="card">
+<h3>A. Fundamentals — one row per stock (required)</h3>
+<div class="row"><input type="file" id="fFile" accept=".csv,text/csv"></div>
+<textarea id="fText" placeholder="ticker,name,sector_type,mcap_cr,..."></textarea>
+<div class="row"><button class="b" id="fLoad">Use pasted fundamentals</button><span id="fMsg" class="small mut"></span></div>
+</div>
+<div class="card">
+<h3>B. Prices — date,ticker,close (optional, powers the Signal Lab)</h3>
+<p class="small mut">Daily or monthly, YYYY-MM-DD. Resampled to month-end. ≥ 5 tickers and ≥ 24 months to test anything.</p>
+<div class="row"><input type="file" id="pFile" accept=".csv,text/csv"></div>
+<textarea id="pText" placeholder="date,ticker,close"></textarea>
+<div class="row"><button class="b" id="pLoad">Use pasted prices</button><span id="pMsg" class="small mut"></span></div>
+</div>
+<div class="card small">
+<h3>Columns</h3>
+<p class="mut">Percentages as numbers (24 = 24%), money in ₹ Cr, negative <code>net_debt_cr</code> = net cash. Blank = missing: scored neutral and flagged, never treated as zero. <code>sector_type</code> sets debt tolerance, pledge tolerance and which valuation cut-offs apply.</p>
+<div class="tbl"><table id="colDoc"></table></div>
+</div>
+</section>
+
+<section id="map">
+<h2>System–Valuation map</h2>
+<div class="note">Up = better system (resilience, trajectory, moat, management). Right = richer valuation. The dashed line is the reference path: price in line with the system. Above-left of it, the business is ahead of the price. Below-right, the price is ahead of the business, so the hurdle rises. Arrows show the approximate move over 3 years where history is supplied — the direction of travel matters more than the dot.</div>
+<canvas id="svChart" width="1100" height="760"></canvas>
+<p class="small mut">Markers: ● CORE · △ CONVEX · □ WATCH · ◆ TRIM · ✕ AVOID · + EXIT.</p>
+</section>
+
+<section id="recs">
+<div id="healthBanner2"></div>
+<h2>Decisions</h2>
+<div id="recKpi" class="kpi"></div>
+<p class="small mut">Tap a row for the five checks, kill switch, capital-lag stage and your qualitative checklist (edits persist in this browser and re-score instantly).</p>
+<div class="tbl"><table id="recTbl"></table></div>
+<div class="row" style="margin-top:8px"><button class="g" id="copyRes">Copy results as CSV</button><span id="copyRes2" class="small mut"></span></div>
+<div id="detail" class="card"></div>
+</section>
+
+<section id="port">
+<h2>Barbell portfolio</h2>
+<div id="portOut" class="mut">Load data first.</div>
+<canvas id="allocChart" width="1100" height="520" style="display:none"></canvas>
+</section>
+
+<section id="lab">
+<h2>Signal Lab — does any price signal actually predict?</h2>
+<div class="note">A signal earns weight only if it predicted forward returns in-sample with |t| ≥ threshold <b>and</b> kept the same sign out-of-sample. Failures get zero weight. Accepted signals only tilt ranking and halve sizes for weak names; they never override a rule.</div>
+<div id="labOut" class="mut">Load prices to run the lab.</div>
+<canvas id="icChart" width="1100" height="460" style="display:none"></canvas>
+<p id="icCap" class="small mut"></p>
+</section>
+
+<section id="set">
+<h2>Settings</h2>
+<p class="small mut">Every threshold is explicit so you can falsify it. Changes re-run the engine.</p>
+<div class="card"><h3>Via negativa — fail any → AVOID</h3><div class="grid" id="setGate"></div></div>
+<div class="card"><h3>Valuation (Mauboussin reverse DCF) &amp; base rates</h3><div class="grid" id="setVal"></div></div>
+<div class="card"><h3>Kapoor rules</h3><div class="grid" id="setK"></div></div>
+<div class="card"><h3>Buckets</h3><div class="grid" id="setBucket"></div></div>
+<div class="card"><h3>Barbell &amp; sizing</h3><div class="grid" id="setSize"></div></div>
+<div class="card"><h3>Signal Lab</h3><div class="grid" id="setLab"></div></div>
+<button class="g" id="resetSet">Reset to defaults</button>
+</section>
+
+<section id="about">
+<h2>Method</h2>
+<div class="card small">
+<h3>Order of authority</h3>
+<ol>
+<li><b>Via negativa first.</b> Remove what can cause ruin before looking at upside: company debt beyond the sector's trough tolerance, weak interest cover, owner debt (pledge) beyond the sector's sensitivity, chronic negative CFO, serial dilution, audit and governance flags. For CDMO, defence and aerospace, also his valuation cut-off — P/S above 15 <i>and</i> market cap above 400× depreciation together — and, for science and tech, negative CFO with market cap above 200× depreciation. P/S above 15 alone is flagged, not removed. Finally, a rich valuation on a fragile system (negative divergence) is rejected.</li>
+<li><b>The system.</b> Resilience (balance sheet against sector tolerance, cash conversion, concentration, margin stability, capitalised-R&amp;D fragility), trajectory (3-year change in ROCE, gross margin, EBITDA margin, receivable days, plus the quarterly hurdle), moat and optionality (Thiel's four plus diversity of customers, suppliers and products — Greene's dependency and bargaining power — and whether the capability carries over to other sectors), and management (skin in the game, delivery against guidance, red flags, whether they blame outside factors).</li>
+<li><b>Valuation.</b> P/S, EV/EBITDA and the growth the price implies (reverse DCF) against an approximate base rate. Plotted against the system: that's the SV map.</li>
+<li><b>Net margin of safety</b> = the <i>minimum</i> of business resilience, management and valuation cheapness. It's an intersection, so one weak leg sinks it.</li>
+<li><b>Capital-lag stage.</b> Low ROCE with a strong balance sheet, healthy gross margin and capacity still being built is "passing pain", valued on a normalised ROCE instead of being penalised. Very high ROCE in a cyclical sector is flagged as a likely peak.</li>
+<li><b>Crowding (six signs).</b> Re-rated multiple, expectations priced in, hot narrative, bullish sell-side, institutions trimming while retail piles in, and a missed quarterly hurdle. When enough line up at once, the action is TRIM, not add.</li>
+<li><b>Regret profile.</b> "Not owning enough": staged buying (20% / 20–30% / final 50% on evidence), larger caps, price falls trigger investigation, not selling. "Overpaying": buy only when valuation is undemanding, smaller caps, a hard price stop.</li>
+<li><b>Kill switch</b> for held positions: price → investigate, time → reassess at the milestone date you set, thesis broken → exit.</li>
+<li><b>Sizing.</b> Barbell: safe side, core (cap × net margin of safety ÷ 10, with fractional Kelly on base-rate scenarios shown as a cross-check) and convex (small fixed stakes sized by maximum loss). Sector caps so one sector can't force you out of another. Tested price signals can halve weak names.</li>
+</ol>
+<h3>Where his ideas come from (his posts, paraphrased)</h3>
+<ul>
+<li>Core model: SV curve, regret minimisation, net margin of safety — <a href="https://antifragilethinking.substack.com/p/how-should-an-investor-think-about">How Should an Investor Think About Risk?</a></li>
+<li>Evidence vs option map — <a href="https://antifragilethinking.substack.com/p/the-measuring-stick">The Measuring Stick</a>; divergence — <a href="https://antifragilethinking.substack.com/p/cognitive-heuristic-the-divergence">The Divergence</a></li>
+<li>Capital-lag J-curve and the ten-industry table — <a href="https://antifragilethinking.substack.com/p/the-nonlinear-capital-lag-framework">The Nonlinear Capital-Lag Framework</a>; ROCE nuance — <a href="https://antifragilethinking.substack.com/p/conundrum-high-roce-shines-low-roce">High ROCE shines, low ROCE hides</a></li>
+<li>Valuation cut-offs — <a href="https://antifragilethinking.substack.com/p/winning-by-not-losing-the-investors">Winning by Not Losing</a>; capitalised R&amp;D — <a href="https://antifragilethinking.substack.com/p/tejas-networks-through-the-via-negativa">Tejas via negativa</a></li>
+<li>Quarterly hurdle — <a href="https://antifragilethinking.substack.com/p/acutaas-paying-for-the-next-rupee">Acutaas: Paying for the Next Rupee</a>; scale test — <a href="https://antifragilethinking.substack.com/p/every-framework-needs-an-exit-condition">Every Framework Needs an Exit Condition</a></li>
+<li>Crowding — <a href="https://antifragilethinking.substack.com/p/six-dots-five-ands">Six Dots. Five ANDs.</a>; five checks — <a href="https://antifragilethinking.substack.com/p/before-you-decide">Before You Decide</a>; kill switch — <a href="https://antifragilethinking.substack.com/p/you-cannot-compound-what-can-go-to">You Cannot Compound What Can Go to Zero</a></li>
+<li>Optionality structure and Greene — <a href="https://antifragilethinking.substack.com/p/bet-on-options-not-certainty">Bet on Options, Not Certainty</a>; portability — <a href="https://antifragilethinking.substack.com/p/the-cost-of-becoming-too-good-at">The Cost of Becoming Too Good at One Thing</a></li>
+<li>Entry after deep drawdowns — <a href="https://antifragilethinking.substack.com/p/micro-caps-investing-at-the-point">Maximum Pessimism</a>; sector sizing — <a href="https://antifragilethinking.substack.com/p/the-capacity-to-stay-wrong">The Capacity to Stay Wrong</a></li>
+</ul>
+<h3>Honest limits</h3>
+<ul>
+<li><b>His numbers are qualitative; mine are not.</b> The sector table rates debt tolerance and pledge sensitivity in words; the numeric cut-offs here are my translation and are editable. The SV axes are my composite scores — he draws the curve by judgement.</li>
+<li><b>Only the price signals are tested.</b> The system score is a snapshot and can't be backtested without point-in-time fundamentals history.</li>
+<li><b>Base rates are approximate</b> (μ 10%, σ 8% for 10-year revenue CAGR, Indian nominal). Replace with your own.</li>
+<li><b>Not Medallion.</b> The Simons part is the discipline of testing, not his methods.</li>
+<li>His video and audio commentary isn't encoded; only the written notes and slides.</li>
+<li>A screening and sizing aid, not investment advice. I'm not a financial advisor — and he repeatedly says not to clone anyone's portfolio, including his.</li>
+</ul>
+</div>
+</section>
+</main>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fin=x=>typeof x==='number'&&isFinite(x);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const mean=a=>a.reduce((s,x)=>s+x,0)/a.length;
+const sdev=a=>{if(a.length<2)return NaN;const m=mean(a);return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/(a.length-1))};
+const f1=x=>fin(x)?x.toFixed(1):'–', f2=x=>fin(x)?x.toFixed(2):'–', pc=x=>fin(x)?(x*100).toFixed(1)+'%':'–', p0=x=>fin(x)?(x*100).toFixed(0)+'%':'–';
+function erf(x){const t=1/(1+0.3275911*Math.abs(x));const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
+const Phi=z=>0.5*(1+erf(z/Math.SQRT2));
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function store(k,v){try{if(v===undefined)return JSON.parse(localStorage.getItem(k)||'null');localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+// lin: linear score between x0→0 and x1→pts; missing → half, noted
+function lin(x,x0,x1,pts,miss,label){if(!fin(x)){if(miss)miss.push(label);return pts/2}return clamp((x-x0)/(x1-x0),0,1)*pts}
+
+/* ---------- sector table (numeric reading of his qualitative ratings) ---------- */
+// [max net debt/EBITDA at trough, max pledge %, science-tech valuation gate, mcap/depreciation gate, cyclical]
+const SECT={fmcg:[3,20,0,0,0],saas:[0.5,5,1,0,0],it_services:[1,10,0,0,0],cro:[1,10,1,0,0],commodity_chem:[2,5,0,0,1],specialty_chem:[2,5,1,0,1],cdmo_sm:[2,5,1,1,0],cdmo_bio:[1,5,1,1,0],pharma:[2.5,10,1,0,0],semifab:[2.5,0,1,0,1],aerospace:[2,5,1,1,0],defence:[2,5,1,1,0],engg:[2.5,10,0,0,1],auto_anc:[2,10,0,0,1],hospital:[3,10,0,0,0],airline:[4,0,0,0,1],metals:[2,5,0,0,1],other:[null,null,0,0,0]};
+
+/* ---------- columns ---------- */
+const COLS=[
+['ticker','text','Symbol'],['name','text','Company name'],['sector_type','text','One of: '+Object.keys(SECT).join(', ')],
+['mcap_cr','num','Market cap'],['price','num','Current price'],['peak_price','num','All-time / cycle high price'],['net_debt_cr','num','Net debt (negative = net cash)'],
+['revenue_cr','num','TTM revenue'],['rev_cagr_5y','num','5-yr revenue CAGR, %'],
+['gross_margin','num','Gross margin, %'],['gross_margin_3y','num','Gross margin 3 yrs ago, %'],['gross_margin_sd','num','Std dev of annual gross margin, 5 yrs, pp'],
+['ebit_margin','num','EBIT margin, %'],['ebit_margin_3y','num','EBIT margin 3 yrs ago, %'],['ebitda_cr','num','TTM EBITDA'],['interest_cr','num','TTM interest'],['depreciation_cr','num','TTM depreciation'],
+['pat_3y_cr','num','Sum of PAT, last 3 yrs'],['cfo_3y_cr','num','Sum of operating cash flow, last 3 yrs'],['cfo_cr','num','TTM operating cash flow'],['cfo_neg_years','num','Years of negative CFO, last 5'],
+['roce','num','ROCE, %'],['roce_3y','num','ROCE 3 yrs ago, %'],['roce_min_5y','num','Lowest ROCE, last 5 yrs, %'],
+['cwip_pct','num','Capital WIP as % of net block (capacity still being built)'],['cap_rnd_pct','num','Capitalised R&D + intangibles under development, % of net worth'],
+['recv_days','num','Receivable days now'],['recv_days_3y','num','Receivable days 3 yrs ago'],['ps_3y','num','P/S 3 yrs ago (for divergence and crowding)'],
+['promoter_pct','num','Promoter holding, %'],['promoter_chg_3y','num','Change in promoter holding, 3 yrs, pp'],['pledge_pct','num','Pledged, % of promoter holding'],
+['dilution_3y','num','Share count increase, 3 yrs, %'],['rnd_pct','num','R&D, % of revenue'],['top_customer_pct','num','Largest customer, % of revenue'],
+['age_yrs','num','Company age, years'],['rpt_pct','num','Related-party transactions, % of revenue'],['guidance_hit','num','Share of past guidance delivered, 0–1'],['auditor_flag','num','1 = qualification / resignation / CARO issue'],
+['dii_chg_1y','num','Change in DII holding, 1 yr, pp'],['retail_chg_1y','num','Change in number of public shareholders, 1 yr, %'],
+['rev_q','num','Latest quarter revenue'],['rev_pq','num','Previous quarter revenue'],['rev_ly','num','Same quarter last year revenue'],
+['ebitdam_q','num','Latest quarter EBITDA margin, %'],['ebitdam_pq','num','Previous quarter EBITDA margin, %'],['ebitdam_ly','num','Same quarter last year EBITDA margin, %'],
+['held','num','1 if you own it'],['avg_cost','num','Your average cost'],['milestone','text','Thesis milestone (e.g. "Plant 2 utilisation > 60%")'],['milestone_date','text','Milestone due date YYYY-MM-DD'],['milestone_met','num','1 if met'],['thesis_broken','num','1 if the original reason no longer holds'],
+['q_tech','num','Thiel: proprietary tech, 0–2'],['q_network','num','Thiel: network effects, 0–2'],['q_scale','num','Thiel: scale economies, 0–2'],['q_brand','num','Thiel: brand, 0–2'],
+['q_diversity','num','Greene/Kapoor: many suppliers, customers, products, markets, 0–2'],['q_portable','num','Capability carries over to other sectors (platform, not pipeline), 0–2'],
+['q_optionality','num','Option pipeline (new molecules, markets, products), 0–3'],['q_antifragile','num','Gains from disorder, 0/1'],['q_secret','num','A non-consensus thesis you can state, 0/1'],
+['c_sellside','num','Crowding: multiple bullish broker reports / rising targets, 0/1'],['c_theme','num','Crowding: rides a hot theme (AI, data centres, defence…), 0/1'],
+['f_opaque','num','Red flag: opaque disclosure / unexplained assets, 0/1'],['f_keyman','num','Red flag: key-man dependence, 0/1'],['f_minority','num','Red flag: minority-hostile structure, 0/1'],['f_hype','num','Red flag: promotion-led price action, 0/1'],['f_narrative','num','Red flag: narrative running ahead of numbers, 0/1'],['f_blame','num','Management blames outside factors rather than owning results, 0/1']
+];
+const QKEYS=['q_tech','q_network','q_scale','q_brand','q_diversity','q_portable','q_optionality','q_antifragile','q_secret','c_sellside','c_theme','f_opaque','f_keyman','f_minority','f_hype','f_narrative','f_blame','thesis_broken','milestone_met'];
+const QMAX={q_tech:2,q_network:2,q_scale:2,q_brand:2,q_diversity:2,q_portable:2,q_optionality:3};
+const QLBL={q_tech:'Thiel · proprietary tech',q_network:'Thiel · network effects',q_scale:'Thiel · scale economies',q_brand:'Thiel · brand',q_diversity:'Greene · diversity (no single dependency)',q_portable:'Capability portable (platform)',q_optionality:'Option pipeline',q_antifragile:'Taleb · gains from disorder',q_secret:'Thiel · a secret',c_sellside:'Crowd · bullish sell-side',c_theme:'Crowd · hot theme',f_opaque:'Flag · opaque disclosure',f_keyman:'Flag · key-man dependence',f_minority:'Flag · minority-hostile',f_hype:'Flag · promotion-led',f_narrative:'Flag · narrative > numbers',f_blame:'Flag · blames externals',thesis_broken:'Kill switch · thesis broken',milestone_met:'Kill switch · milestone met'};
+$('#colDoc').innerHTML='<tr><th class="l">column</th><th class="l">meaning</th></tr>'+COLS.map(c=>`<tr><td class="l"><code>${c[0]}</code></td><td class="l">${esc(c[2])}</td></tr>`).join('');
+
+/* ---------- settings ---------- */
+const DEF={regret:'own',
+cov:2.5,cfoNeg:3,dil:25,govMin:4,govFlags:2,ndEdef:3,pledgeDef:10,psMax:15,depMax:400,depNegMax:200,negDivV:7,negDivR:5,
+r:12,gT:5,tax:25,N:10,mu:10,sd:8,shrink:30,exitMult:25,
+capRnd:30,ddEntry:50,crowdTrim:5,crowdCaution:3,rerate:2.5,peakRoce:30,ppRoceGap:3,ppCwip:20,ppGM:35,invest:25,stop:20,p10xSwitch:10,
+coreS:6.5,nmosOwn:5,nmosOverpay:6.5,overpayV:5,convO:6,convR:4.5,convMcap:15000,
+safe:20,core:65,convex:15,capCoreOwn:12,capCoreOverpay:8,capConvex:2.5,kelly:25,sectorCap:25,momOverlay:1,
+h:1,tmin:2,oosFrac:40};
+const SETS={
+setGate:[['ndEdef','Default max net debt/EBITDA (sector "other")'],['pledgeDef','Default max pledge % (sector "other")'],['cov','Min interest cover'],['cfoNeg','Fail at ≥ this many negative-CFO years (of 5)'],['dil','Max 3-yr dilution, %'],['govMin','Min governance score'],['govFlags','Fail at this many red flags'],['psMax','Science/tech P/S cut-off (with the next rule)'],['depMax','… AND mcap ÷ depreciation above (CDMO/defence/aero)'],['depNegMax','Negative CFO: max mcap ÷ depreciation'],['negDivV','Negative divergence: valuation ≥'],['negDivR','… with resilience <']],
+setVal:[['r','Cost of equity, %'],['gT','Terminal growth, %'],['tax','Tax rate, %'],['N','Forecast years'],['mu','Base-rate mean 10-yr revenue CAGR, %'],['sd','Base-rate std dev, pp'],['shrink','Weight on firm history vs base rate, %'],['exitMult','Scale test: exit multiple on NOPAT']],
+setK:[['capRnd','Capitalised R&D fragile above, % of net worth'],['ddEntry','Staged entry starts after drawdown from peak, %'],['crowdTrim','Crowding signs for TRIM (of 6)'],['crowdCaution','Crowding signs for "don\'t add"'],['rerate','Re-rated if P/S ÷ P/S 3y ago ≥'],['peakRoce','Cyclical peak warning: ROCE ≥, %'],['ppRoceGap','Passing pain: ROCE below cost of equity + pp'],['ppCwip','Passing pain: CWIP ≥ % of net block'],['ppGM','Passing pain: gross margin ≥, %'],['invest','Kill switch: investigate at fall from cost, %'],['stop','Overpay profile: hard stop at fall from cost, %'],['p10xSwitch','Scale test: switch if P(10× in 10 yrs) <, %']],
+setBucket:[['coreS','CORE: min system score'],['nmosOwn','CORE: min net margin of safety (own profile)'],['nmosOverpay','CORE: min net margin of safety (overpay profile)'],['overpayV','Overpay profile: max valuation score to buy'],['convO','CONVEX: min option score'],['convR','CONVEX: min resilience'],['convMcap','CONVEX: max mcap, ₹ Cr']],
+setSize:[['safe','Safe side, %'],['core','Core budget, %'],['convex','Convex budget, %'],['capCoreOwn','Max per CORE (own profile), %'],['capCoreOverpay','Max per CORE (overpay profile), %'],['capConvex','Max per CONVEX, %'],['kelly','Kelly fraction, % (shown as a cross-check)'],['sectorCap','Max per sector, %'],['momOverlay','Halve size if tested-signal pct < 25 (1/0)']],
+setLab:[['h','Forward horizon, months'],['tmin','Min in-sample |t|'],['oosFrac','Out-of-sample share, %']]};
+let P=Object.assign({},DEF,store('afqe2_set')||{});
+function buildSettings(){for(const id in SETS){$('#'+id).innerHTML=SETS[id].map(([k,l])=>`<div><label>${esc(l)}</label><input type="number" step="any" data-k="${k}" value="${P[k]}"></div>`).join('')}
+document.querySelectorAll('#set input[data-k]').forEach(inp=>inp.addEventListener('change',()=>{const v=parseFloat(inp.value);if(fin(v)){P[inp.dataset.k]=v;store('afqe2_set',P);if(['h','tmin','oosFrac'].includes(inp.dataset.k)&&S.prices)S.lab=runLab(S.prices);runAll()}}))}
+$('#resetSet').onclick=()=>{P=Object.assign({},DEF);store('afqe2_set',P);buildSettings();setRegret(P.regret);if(S.prices)S.lab=runLab(S.prices);runAll()};
+buildSettings();
+const RTXT={own:'Long-term owner. Build positions in stages (20% now, 20–30% on the next evidence, the last 50% just in time), accept volatility, larger caps. A falling price triggers investigation, not selling. Exit only when the thesis breaks.',overpay:'Capital preservation. Buy only when valuation is undemanding, smaller caps, a hard stop below cost, wait for better entries rather than chase.'};
+function setRegret(r){P.regret=r;store('afqe2_set',P);document.querySelectorAll('#regretSeg button').forEach(b=>b.classList.toggle('on',b.dataset.r===r));$('#regretTxt').textContent=RTXT[r];runAll()}
+document.querySelectorAll('#regretSeg button').forEach(b=>b.onclick=()=>setRegret(b.dataset.r));
+
+/* ---------- state & io ---------- */
+const S={fund:[],prices:null,lab:null,res:[],over:store('afqe2_over')||{}};
+function parseCSV(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=c}else if(c==='"')q=true;else if(c===','){row.push(f);f=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&t[i+1]==='\n')i++;row.push(f);f='';if(row.some(x=>x.trim()!==''))rows.push(row);row=[]}else f+=c}
+row.push(f);if(row.some(x=>x.trim()!==''))rows.push(row);if(!rows.length)return[];const h=rows.shift().map(x=>x.trim().toLowerCase());return rows.map(r=>{const o={};h.forEach((k,j)=>o[k]=(r[j]??'').trim());return o})}
+const num=x=>{if(x==null)return NaN;const s=String(x).replace(/[,₹%\s]/g,'');return s===''?NaN:parseFloat(s)};
+function loadFund(text){const rows=parseCSV(text);if(!rows.length||!('ticker' in rows[0]))throw new Error('Need a header row with at least a "ticker" column.');
+S.fund=rows.filter(r=>r.ticker).map(r=>{const o={};for(const [k,t] of COLS)o[k]=t==='num'?num(r[k]):(r[k]||'');o.ticker=o.ticker.toUpperCase();o.sector_type=(o.sector_type||'other').toLowerCase();if(!(o.sector_type in SECT))o.sector_type='other';return o});return S.fund.length}
+function loadPrices(text){const rows=parseCSV(text);if(!rows.length||!('date' in rows[0]&&'ticker' in rows[0]&&'close' in rows[0]))throw new Error('Need columns date,ticker,close.');
+const p=rows.map(r=>({date:r.date,ticker:r.ticker.toUpperCase(),close:num(r.close)})).filter(r=>/^\d{4}-\d{2}/.test(r.date)&&fin(r.close)&&r.close>0);if(!p.length)throw new Error('No valid rows (dates must be YYYY-MM-DD).');S.prices=p;S.lab=runLab(p);return p.length}
+function readFile(inp,cb){inp.addEventListener('change',()=>{const f=inp.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>cb(rd.result);rd.readAsText(f)})}
+function doF(t){try{const n=loadFund(t);persistFund();$('#fMsg').textContent=n+' stocks loaded.';runAll()}catch(e){$('#fMsg').textContent='Error: '+e.message}}
+function doP(t){try{const n=loadPrices(t);$('#pMsg').textContent=n+' price rows loaded.';runAll()}catch(e){$('#pMsg').textContent='Error: '+e.message}}
+readFile($('#fFile'),doF);readFile($('#pFile'),doP);
+$('#fLoad').onclick=()=>doF($('#fText').value);$('#pLoad').onclick=()=>doP($('#pText').value);
+function copy(txt,el){try{navigator.clipboard.writeText(txt).then(()=>el.textContent='Copied.',()=>el.textContent='Copy blocked — select the text box instead.')}catch(e){el.textContent='Copy blocked.'}}
+$('#tplF').onclick=()=>{const t=COLS.map(c=>c[0]).join(',')+'\n';$('#fText').value=t;copy(t,$('#copyMsg'))};
+$('#tplP').onclick=()=>{const t='date,ticker,close\n2026-09-30,ABC,123.4\n';$('#pText').value=t;copy(t,$('#copyMsg'))};
+
+/* ---------- Screener.in import ---------- */
+$('#xSector').innerHTML=Object.keys(SECT).map(k=>`<option ${k==='other'?'selected':''}>${k}</option>`).join('');
+function screenerRow(wb,st){const ws=wb.Sheets['Data Sheet'];if(!ws)throw new Error('No "Data Sheet" tab — is this a Screener export?');
+const A=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});let sec='META';const D={META:{},PL:{},Q:{},BS:{},CF:{},DER:{}};
+for(const row of A){if(row[0]==null)continue;const k=String(row[0]).trim();
+if(k==='PROFIT & LOSS'){sec='PL';continue}if(k==='Quarters'){sec='Q';continue}if(k==='BALANCE SHEET'){sec='BS';continue}if(k.startsWith('CASH FLOW')){sec='CF';continue}if(k.startsWith('PRICE')){D.PRICE=row.slice(1,11);continue}if(k.startsWith('DERIVED')){sec='DER';continue}
+if(sec==='META'){D.META[k]=row[1];continue}D[sec][k]=row.slice(1,11)}
+const g=(o,k,i)=>{const v=o[k]?o[k][i]:null;return typeof v==='number'?v:NaN};
+const lastIdx=arr=>{if(!arr)return -1;for(let i=arr.length-1;i>=0;i--)if(typeof arr[i]==='number')return i;return -1};
+const n=lastIdx(D.PL['Sales']),qn=lastIdx(D.Q['Sales']);if(n<0)throw new Error('No annual sales found');
+const PL=D.PL,BS=D.BS,CF=D.CF,Q=D.Q;const sales=i=>g(PL,'Sales',i);
+const gm=i=>(sales(i)-(g(PL,'Raw Material Cost',i)-(g(PL,'Change in Inventory',i)||0)))/sales(i)*100;
+const ebit=i=>g(PL,'Profit Before Tax',i)+g(PL,'Interest',i)-(g(PL,'Other Income',i)||0);
+const capE=i=>g(BS,'Equity Share Capital',i)+g(BS,'Reserves',i)+g(BS,'Borrowings',i);
+const roce=i=>{const c0=capE(i),c1=capE(i-1);return ebit(i)/((fin(c1)?(c0+c1)/2:c0))*100};
+const sh=i=>g(D.DER,'Adjusted Equity Shares in Cr',i);const rng=(a,b)=>{const o=[];for(let i=a;i<=b;i++)if(i>=0)o.push(i);return o};
+const sumQ=(k,f)=>{let s=0;for(let i=qn-3;i<=qn;i++){const v=f?f(i):g(Q,k,i);if(!fin(v))return NaN;s+=v}return s};
+const qEbit=i=>g(Q,'Profit before tax',i)+g(Q,'Interest',i)-(g(Q,'Other Income',i)||0);
+const ttmS=qn>=3?sumQ('Sales'):sales(n),ttmOP=qn>=3?sumQ('Operating Profit'):NaN,ttmDep=qn>=3?sumQ('Depreciation'):g(PL,'Depreciation',n),ttmInt=qn>=3?sumQ('Interest'):g(PL,'Interest',n),ttmEbit=qn>=3?sumQ(null,qEbit):ebit(n);
+const name=String(D.META['COMPANY NAME']||'Unknown').trim();const tk=name.toUpperCase().replace(/\b(LTD|LIMITED|THE)\b/g,'').replace(/[^A-Z0-9]/g,'').slice(0,14)||'CO';
+const mcap=num(D.META['Market Capitalization']);const p3=D.PRICE&&typeof D.PRICE[n-3]==='number'?D.PRICE[n-3]:NaN;
+const gms=rng(n-4,n).map(gm).filter(fin),roces=rng(n-4,n).map(roce).filter(fin);const cfos=rng(n-4,n).map(i=>g(CF,'Cash from Operating Activity',i)).filter(fin);
+const R1=x=>fin(x)?Math.round(x*10)/10:'';const R0=x=>fin(x)?Math.round(x):'';
+const o={ticker:tk,name,sector_type:st,mcap_cr:R0(mcap),price:num(D.META['Current Price']),peak_price:'',
+net_debt_cr:R0(g(BS,'Borrowings',n)-(g(BS,'Cash & Bank',n)||0)),revenue_cr:R0(ttmS),rev_cagr_5y:n>=5?R1((Math.pow(sales(n)/sales(n-5),1/5)-1)*100):'',
+gross_margin:R1(gm(n)),gross_margin_3y:R1(gm(n-3)),gross_margin_sd:gms.length>=3?R1(sdev(gms)):'',
+ebit_margin:R1(ttmEbit/ttmS*100),ebit_margin_3y:R1(ebit(n-3)/sales(n-3)*100),ebitda_cr:R0(fin(ttmOP)?ttmOP:ebit(n)+g(PL,'Depreciation',n)),interest_cr:R0(ttmInt),depreciation_cr:R0(ttmDep),
+pat_3y_cr:R0(rng(n-2,n).reduce((a,i)=>a+g(PL,'Net Profit',i),0)),cfo_3y_cr:R0(rng(n-2,n).reduce((a,i)=>a+g(CF,'Cash from Operating Activity',i),0)),cfo_cr:R0(g(CF,'Cash from Operating Activity',n)),cfo_neg_years:cfos.filter(v=>v<0).length,
+roce:R1(roce(n)),roce_3y:R1(roce(n-3)),roce_min_5y:roces.length?R1(Math.min(...roces)):'',cwip_pct:R1(g(BS,'Capital Work in Progress',n)/g(BS,'Net Block',n)*100),
+recv_days:R0(g(BS,'Receivables',n)/sales(n)*365),recv_days_3y:R0(g(BS,'Receivables',n-3)/sales(n-3)*365),ps_3y:fin(p3)&&fin(sh(n-3))?R1(p3*sh(n-3)/sales(n-3)):'',
+dilution_3y:fin(sh(n))&&fin(sh(n-3))?R1((sh(n)/sh(n-3)-1)*100):'',
+rev_q:R0(g(Q,'Sales',qn)),rev_pq:R0(g(Q,'Sales',qn-1)),rev_ly:R0(g(Q,'Sales',qn-4)),ebitdam_q:R1(g(Q,'Operating Profit',qn)/g(Q,'Sales',qn)*100),ebitdam_pq:R1(g(Q,'Operating Profit',qn-1)/g(Q,'Sales',qn-1)*100),ebitdam_ly:R1(g(Q,'Operating Profit',qn-4)/g(Q,'Sales',qn-4)*100)};
+return o}
+function fundCSV(rows){const head=COLS.map(c=>c[0]);const qq=v=>/[,"]/.test(String(v??''))?'"'+String(v).replace(/"/g,'""')+'"':(fin(v)||typeof v==='string'?v:'');return head.join(',')+'\n'+rows.map(r=>head.map(k=>qq(r[k])).join(',')).join('\n')}
+$('#xFile').addEventListener('change',async()=>{const fs=[...$('#xFile').files];if(!fs.length)return;if(typeof XLSX==='undefined'){$('#xMsg').textContent='The Excel reader library did not load; export the Data Sheet as CSV instead.';return}
+const st=$('#xSector').value;const msgs=[];for(const f of fs){try{const wb=XLSX.read(await f.arrayBuffer(),{type:'array'});const o=screenerRow(wb,st);const csv=fundCSV([o]);const parsed=parseCSV(csv)[0];const row={};for(const [k,t] of COLS)row[k]=t==='num'?num(parsed[k]):(parsed[k]||'');row.sector_type=st;
+const i=S.fund.findIndex(x=>x.ticker===row.ticker);if(i>=0)S.fund[i]=row;else S.fund.push(row);msgs.push('✓ '+row.name)}catch(e){msgs.push('✗ '+f.name+': '+e.message)}}
+$('#fText').value=fundCSV(S.fund);$('#xMsg').textContent=msgs.join(' · ')+' — '+S.fund.length+' stocks loaded.';$('#xFile').value='';runAll();show('recs')});
+
+/* ---------- automatic fetch (Supabase → Screener + Yahoo) ---------- */
+const SB_PROJECT='bdkfphzgsoainhfotxgv';let MCP=null,SAMPLE=null;S.drafts=store('afqe2_drafts')||{};S.checks=store('afqe2_checks')||{};
+$('#aSector').innerHTML='<option value="auto" selected>auto (Claude)</option>'+Object.keys(SECT).map(k=>`<option>${k}</option>`).join('');
+(async()=>{try{if(window.claude&&window.claude.use){[MCP,SAMPLE]=await Promise.all([window.claude.use('mcp').catch(()=>null),window.claude.use('sample').catch(()=>null)])}}catch(e){}
+if(!MCP){$('#aTok').style.display='flex';$('#aTokIn').value=store('afqe2_token')||'';$('#aMsg').innerHTML=store('afqe2_token')?'Direct connection to your Supabase endpoint.':'Enter your access token once to fetch directly from your Supabase endpoint.'}
+if(!SAMPLE){$('#aDraft').checked=false;$('#aDraft').disabled=true;$('#aDraft').parentElement.title='Claude drafts work when the page is opened on claude.ai';$('#aDraft').parentElement.insertAdjacentHTML('beforeend',' <span class="mut">(on claude.ai only)</span>')}})();
+const EDGE='https://bdkfphzgsoainhfotxgv.supabase.co/functions/v1/afqe';
+$('#aTokSave').onclick=()=>{store('afqe2_token',$('#aTokIn').value.trim());$('#aMsg').textContent='Token saved in this browser.'};
+async function edgeGet(kind,sym){const tok=store('afqe2_token');if(!tok){const e=new Error('Enter your access token first.');e.code='no_token';throw e}
+let res;try{res=await fetch(`${EDGE}?kind=${kind}&sym=${encodeURIComponent(sym)}`,{headers:{'x-afqe-token':tok}})}catch(err){const e=new Error('Could not reach the Supabase endpoint (offline, or the project is paused).');e.code='network';throw e}
+const j=await res.json().catch(()=>null);if(res.status===401){const e=new Error('Wrong access token.');e.code='bad_token';throw e}if(res.status===429){const e=new Error('Rate limit reached (300 fetches per hour). Try later.');e.code='rate';throw e}if(!res.ok||!j){const e=new Error((j&&j.error)||('Endpoint error '+res.status));e.code='edge';throw e}return j}
+function tbl(html){if(!html)return null;const d=new DOMParser().parseFromString('<table>'+html.replace(/^\s*<table>|<\/table>\s*$/g,'')+'</table>','text/html');const cols=[...d.querySelectorAll('thead th')].map(t=>t.textContent.trim()).slice(1);const rows={};
+d.querySelectorAll('tbody tr').forEach(tr=>{const td=[...tr.querySelectorAll('td')];if(td.length<2)return;const k=td[0].textContent.replace(/ /g,' ').replace(/\+\s*$/,'').trim().split('  ')[0].trim();rows[k]=td.slice(1).map(x=>num(x.textContent))});return{cols,rows}}
+const tv=(T,row,col)=>{if(!T||!T.rows[row])return NaN;const i=T.cols.indexOf(col);return i<0?NaN:T.rows[row][i]};
+const sv=(o,row,col)=>o&&o[row]&&o[row][col]!=null?num(o[row][col]):NaN;
+function fromScreener(j,sym,st){const PL=tbl(j.profit_loss),Q=tbl(j.quarters),BS=tbl(j.balance_sheet),CFt=tbl(j.cash_flow),RT=tbl(j.ratios),SH=tbl(j.shareholding);const checks=[];
+if(!PL||!PL.rows['Sales'])throw new Error('no sales table (banks/NBFCs are not supported)');
+const top={};(j.top||'').replace(/<li>(.*?)<\/li>/g,(m,x)=>{const t=x.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();const mm=t.match(/^(Market Cap|Current Price|High \/ Low|Stock P\/E|Book Value)\s*₹?\s*([\d,.]+)/);if(mm)top[mm[1]]=num(mm[2])});
+const yrs=PL.cols.filter(c=>c!=='TTM');const Y=k=>yrs[yrs.length-1-k];const hasTTM=PL.cols.includes('TTM');
+const s=(r,c)=>tv(PL,r,c);const sales=c=>s('Sales',c);const ebit=c=>s('Profit before tax',c)+s('Interest',c)-(s('Other Income',c)||0);
+const qc=Q?Q.cols:[];const qsum=r=>{if(qc.length<4)return NaN;let a=0;for(const c of qc.slice(-4)){const v=tv(Q,r,c);if(!fin(v))return NaN;a+=v}return a};
+const ttm=r=>hasTTM&&fin(s(r,'TTM'))?s(r,'TTM'):qsum(r);
+const tS=ttm('Sales'),tOP=ttm('Operating Profit'),tDep=ttm('Depreciation'),tInt=ttm('Interest'),tE=ttm('Profit before tax')+tInt-(ttm('Other Income')||0);
+if(hasTTM&&fin(qsum('Sales'))&&Math.abs(qsum('Sales')/s('Sales','TTM')-1)>0.03)checks.push(`TTM sales ${s('Sales','TTM')} vs sum of last 4 quarters ${qsum('Sales')}`);
+const mcap=top['Market Cap'],price=top['Current Price'];const bsLast=BS?BS.cols[BS.cols.length-1]:null;
+const cashLast=j.assets?sv(j.assets,'Cash Equivalents',bsLast):NaN;const cashFY=j.assets?sv(j.assets,'Cash Equivalents',Y(0)):NaN;const cash=fin(cashLast)?cashLast:cashFY;
+if(!fin(cash))checks.push('Cash not available: net debt = gross borrowings (conservative)');
+const gm=c=>{const m=j.schedules?sv(j.schedules,'Material Cost %',c):NaN;return fin(m)?100-m:NaN};
+const roce=c=>tv(RT,'ROCE %',c);const last5=[0,1,2,3,4].map(Y).filter(Boolean);
+const gms=last5.map(gm).filter(fin),roces=last5.map(roce).filter(fin),cfos=last5.map(c=>tv(CFt,'Cash from Operating Activity',c)).filter(fin);
+// prices
+let closes=[],ts=[];if(j.yahoo&&Array.isArray(j.yahoo.t)){ts=j.yahoo.t;closes=j.yahoo.close||[]}
+const pxAt=label=>{const m=label&&label.match(/(\w{3}) (\d{4})/);if(!m||!ts.length)return NaN;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m[1]);const target=Date.UTC(+m[2],mo,1)/1000;let bi=-1,bd=1e18;ts.forEach((t,i)=>{const d=Math.abs(t-target);if(fin(closes[i])&&d<bd){bd=d;bi=i}});return bi>=0&&bd<20*86400?closes[bi]:NaN}; // Yahoo monthly bars are stamped at month start and close at month end
+const yPrice=j.yahoo&&fin(j.yahoo.price)?j.yahoo.price:NaN;if(fin(yPrice)&&fin(price)&&Math.abs(yPrice/price-1)>0.03)checks.push(`Price check: Screener ₹${price} vs Yahoo ₹${yPrice.toFixed(1)}`);
+const shares=fin(mcap)&&fin(price)&&price>0?mcap/price:NaN;const ec=c=>tv(BS,'Equity Capital',c);const p3=pxAt(Y(3));
+const mcap3=fin(p3)&&fin(shares)?p3*shares*(fin(ec(Y(3)))&&fin(ec(Y(0)))&&ec(Y(0))>0?ec(Y(3))/ec(Y(0)):1):NaN;
+const peak=closes.filter(fin).length?Math.max(...closes.filter(fin)):NaN;
+const shc=SH?SH.cols:[];const shv=(r,k)=>tv(SH,r,shc[shc.length-1-k]);
+const about=(j.about||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();const fy=about.match(/(?:founded|incorporated|established|set up)\D{0,25}((?:19|20)\d{2})/i);
+const R1=x=>fin(x)?Math.round(x*10)/10:NaN,R0=x=>fin(x)?Math.round(x):NaN;
+const o={ticker:sym,name:j.name||sym,sector_type:st,mcap_cr:R0(mcap),price,peak_price:R0(peak),net_debt_cr:R0(tv(BS,'Borrowings',bsLast)-(fin(cash)?cash:0)),
+revenue_cr:R0(tS),rev_cagr_5y:fin(sales(Y(5)))?R1((Math.pow(sales(Y(0))/sales(Y(5)),1/5)-1)*100):NaN,
+gross_margin:R1(gm(Y(0))),gross_margin_3y:R1(gm(Y(3))),gross_margin_sd:gms.length>=3?R1(sdev(gms)):NaN,
+ebit_margin:R1(tE/tS*100),ebit_margin_3y:R1(ebit(Y(3))/sales(Y(3))*100),ebitda_cr:R0(tOP),interest_cr:R0(tInt),depreciation_cr:R0(tDep),
+pat_3y_cr:R0([0,1,2].reduce((a,k)=>a+s('Net Profit',Y(k)),0)),cfo_3y_cr:R0([0,1,2].reduce((a,k)=>a+tv(CFt,'Cash from Operating Activity',Y(k)),0)),cfo_cr:R0(tv(CFt,'Cash from Operating Activity',Y(0))),cfo_neg_years:cfos.filter(v=>v<0).length,
+roce:R1(roce(Y(0))),roce_3y:R1(roce(Y(3))),roce_min_5y:roces.length?Math.min(...roces):NaN,cwip_pct:R1(tv(BS,'CWIP',bsLast)/tv(BS,'Fixed Assets',bsLast)*100),cap_rnd_pct:NaN,
+recv_days:R0(tv(RT,'Debtor Days',Y(0))),recv_days_3y:R0(tv(RT,'Debtor Days',Y(3))),ps_3y:R1(mcap3/sales(Y(3))),
+promoter_pct:R1(shv('Promoters',0)),promoter_chg_3y:R1(shv('Promoters',0)-tv(SH,'Promoters',shc[0])),pledge_pct:NaN,
+dilution_3y:fin(ec(Y(3)))&&ec(Y(3))>0?R1((ec(Y(0))/ec(Y(3))-1)*100):NaN,rnd_pct:NaN,top_customer_pct:NaN,age_yrs:fy?new Date().getFullYear()-+fy[1]:NaN,rpt_pct:NaN,guidance_hit:NaN,auditor_flag:NaN,
+dii_chg_1y:R1(shv('DIIs',0)-shv('DIIs',4)),retail_chg_1y:R1((shv('No. of Shareholders',0)/shv('No. of Shareholders',4)-1)*100),
+rev_q:R0(tv(Q,'Sales',qc[qc.length-1])),rev_pq:R0(tv(Q,'Sales',qc[qc.length-2])),rev_ly:R0(tv(Q,'Sales',qc[qc.length-5])),
+ebitdam_q:tv(Q,'OPM %',qc[qc.length-1]),ebitdam_pq:tv(Q,'OPM %',qc[qc.length-2]),ebitdam_ly:tv(Q,'OPM %',qc[qc.length-5]),
+held:NaN,avg_cost:NaN,milestone:'',milestone_date:'',milestone_met:NaN,thesis_broken:NaN};
+for(const [k,t] of COLS)if(!(k in o))o[k]=t==='num'?NaN:'';
+checks.push(`Source: Screener ${j.consolidated?'consolidated':'standalone'} · FY ${Y(0)}${j.cached?' · cached '+String(j.fetched_at||'').slice(0,16).replace('T',' '):''}`);
+if(!fin(gm(Y(0))))checks.push('Gross margin unavailable (no material-cost breakdown)');
+o._about=about.slice(0,1200);o._prices=ts.map((t,i)=>fin(closes[i])?{date:new Date(t*1000).toISOString().slice(0,10),ticker:sym,close:closes[i]}:null).filter(Boolean);
+return{o,checks}}
+function sqlPayloadToJson(p){let t=typeof p==='string'?p:(p&&typeof p.result==='string'?p.result:JSON.stringify(p));const i=t.indexOf('[{'),k=t.lastIndexOf('}]');if(i<0||k<0)throw new Error('unexpected reply from Supabase');return JSON.parse(t.slice(i,k+2))}
+const ERRTXT={needs_reauth:'Reconnect Supabase in claude.ai Settings → Connectors.',server_not_connected:'Add the Supabase connector in claude.ai Settings → Connectors.',not_in_manifest:'Supabase access is turned off for this page — allow it to fetch.',approval_required:'This needs your approval — press Fetch again and allow it.',blocked_by_policy:'Your organisation blocks this connector.',selection_required:'Choose which Supabase connection to use when claude.ai asks.'};
+async function fetchSym(sym){if(!MCP){const j=await edgeGet('screener',sym);if(j.error)throw new Error(j.error);return j}const res=await MCP.callTool('Supabase','execute_sql',{project_id:SB_PROJECT,query:`select public.afqe_screener('${sym}') j`});const arr=sqlPayloadToJson(res.payload);const j=arr[0]&&arr[0].j;if(!j)throw new Error('empty reply');if(j.error)throw new Error(j.error);return j}
+/* ---------- exchange (BSE) + source health ---------- */
+const NEED={top:['Market Cap','Current Price'],profit_loss:['Sales','Operating Profit','Interest','Depreciation','Profit before tax','Net Profit'],quarters:['Sales','Operating Profit','OPM %'],balance_sheet:['Equity Capital','Reserves','Borrowings','Fixed Assets','CWIP'],cash_flow:['Cash from Operating Activity'],ratios:['ROCE %','Debtor Days'],shareholding:['Promoters','DIIs','No. of Shareholders']};
+const CRIT={profit_loss:['Sales'],top:['Market Cap']};
+function screenerHealth(j){const issues=[],crit=[];
+for(const sec in NEED){if(sec==='top'){for(const k of NEED.top){if(!new RegExp(k.replace('/','\\/')).test(j.top||'')){(CRIT.top&&CRIT.top.includes(k)?crit:issues).push(`top ratios: "${k}"`)}}continue}
+const T=tbl(j[sec]);if(!T){(CRIT[sec]?crit:issues).push(`${sec.replace('_',' ')} table not found`);continue}
+if(sec==='profit_loss'&&T.cols.filter(c=>c!=='TTM').length<6)issues.push('profit & loss: fewer than 6 years of columns');
+for(const k of NEED[sec])if(!T.rows[k]){(CRIT[sec]&&CRIT[sec].includes(k)?crit:issues).push(`${sec.replace('_',' ')}: row "${k}"`)}}
+if(!j.schedules||!j.schedules['Material Cost %'])issues.push('cost breakdown: "Material Cost %" (gross margin)');
+if(!j.assets||!j.assets['Cash Equivalents'])issues.push('balance-sheet breakdown: "Cash Equivalents"');
+if(!j.yahoo||!Array.isArray(j.yahoo.t)||!j.yahoo.t.length)issues.push('Yahoo: monthly price history');
+return{issues,crit}}
+function parseExchange(x,o,checks){const issues=[];if(!x||x.error){issues.push('BSE: '+((x&&x.error)||'no reply'));return issues}
+o._industry=[x.industry,x.sector].filter(Boolean).join(' / ');
+// shareholding filing
+const t=(x.shp_text||'').split('|').map(v=>v.trim()).filter(v=>v!=='');const i=t.findIndex(v=>/^\(A\)\s*Promoter/i.test(v));
+if(i<0)issues.push('BSE shareholding: promoter row not found');
+else{let cells=[];for(let k=i+1;k<t.length&&!/^\((B|C)/.test(t[k]);k++)cells.push(t[k]);cells=cells.filter(v=>v!=='--');
+const pct=num(cells[3]),enc=num(cells[cells.length-2]),pl=num(cells[cells.length-4]);
+if(!fin(pct)||pct>100||!fin(enc)||enc>100||!fin(pl)||pl>100)issues.push('BSE shareholding: columns not where expected');
+else{o.pledge_pct=Math.round(Math.max(pl,enc)*100)/100;checks.push(`Pledge/encumbrance ${o.pledge_pct}% of promoter shares (BSE filing)`);
+if(fin(o.promoter_pct)&&Math.abs(o.promoter_pct-pct)>0.3)checks.push(`⚠ Promoter % differs: Screener ${o.promoter_pct} vs BSE ${pct}`);else checks.push(`Promoter ${pct}% ✓ matches BSE`)}}
+// filed results (standalone) vs Screener standalone quarters
+const R=x.results_html?(()=>{const d=new DOMParser().parseFromString('<table>'+x.results_html+'</table>','text/html');const trs=[...d.querySelectorAll('tr')];if(!trs.length)return null;const cols=[...trs[0].querySelectorAll('td,th')].map(c=>c.textContent.trim()).slice(1);const rows={};trs.slice(1).forEach(tr=>{const td=[...tr.querySelectorAll('td')];if(td.length>1)rows[td[0].textContent.trim()]=td.slice(1).map(c=>num(c.textContent))});return{cols,rows}})():null;
+const SQ=tbl(x.screener_s_quarters);
+if(!R||!R.rows['Revenue'])issues.push('BSE results: revenue row not found');
+else if(!SQ||!SQ.rows['Sales'])issues.push('Screener standalone quarters not readable (cross-check skipped)');
+else{const MM={Jan:'Jan',Feb:'Feb',Mar:'Mar',Apr:'Apr',May:'May',Jun:'Jun',Jul:'Jul',Aug:'Aug',Sep:'Sep',Oct:'Oct',Nov:'Nov',Dec:'Dec'};let ok=0,bad=[];
+R.cols.forEach((c,ci)=>{const m=c.match(/^(\w{3})-(\d{2})$/);if(!m||!MM[m[1]])return;const lbl=`${m[1]} 20${m[2]}`;const a=R.rows['Revenue'][ci],b=tv(SQ,'Sales',lbl);if(!fin(a)||!fin(b))return;if(Math.abs(b/a-1)<=0.02)ok++;else bad.push(`${lbl}: Screener ₹${b} vs BSE ₹${a.toFixed(0)}`)});
+if(bad.length)checks.push('⚠ Revenue mismatch with BSE filing (standalone): '+bad.join('; '));else if(ok)checks.push(`Revenue verified against BSE filings: ${ok} quarters ✓ (standalone basis)`);else issues.push('BSE results: no overlapping quarters to compare')}
+return issues}
+function setHealth(sym,src,issues,crit){S.health=S.health||store('afqe2_health')||{};S.health[sym]=S.health[sym]||{};S.health[sym][src]={issues,crit:crit||[],at:new Date().toISOString()};store('afqe2_health',S.health);renderHealth()}
+function renderHealth(){const H=S.health||store('afqe2_health')||{};const bad=[];for(const sym in H)for(const src in H[sym]){const h=H[sym][src];if(h.crit&&h.crit.length)bad.push(`<li><b class="flag">${esc(sym)} · ${esc(src)}: couldn't read ${esc(h.crit.join(', '))}</b> — this stock can't be scored from this source.</li>`);if(h.issues&&h.issues.length)bad.push(`<li>${esc(sym)} · ${esc(src)}: couldn't read ${esc(h.issues.join(', '))}</li>`)}
+const html=bad.length?`<div class="hb"><b>⚠ A data source may have changed its layout or blocked the request</b><ul style="margin:4px 0 4px 18px">${bad.slice(0,12).join('')}</ul>Affected fields score neutral and are listed under "Missing" in each stock. If Screener's main tables fail, use the Excel import below until the reader is updated. <button class="g clrHealth" style="padding:3px 8px">Dismiss</button></div>`:'';
+$('#healthBanner').innerHTML=html;$('#healthBanner2').innerHTML=html;document.querySelectorAll('.clrHealth').forEach(x=>x.onclick=()=>{S.health={};store('afqe2_health',{});renderHealth()})}
+setTimeout(renderHealth,0);
+async function fetchExchange(sym){if(!MCP)return edgeGet('exchange',sym);const res=await MCP.callTool('Supabase','execute_sql',{project_id:SB_PROJECT,query:`select public.afqe_exchange('${sym}') j`});const arr=sqlPayloadToJson(res.payload);return arr[0]&&arr[0].j}
+function persistFund(){try{store('afqe2_fund',S.fund.map(r=>{const o={...r};delete o._prices;return o}))}catch(e){}}
+$('#aGo').onclick=async()=>{if(!MCP&&!store('afqe2_token')){$('#aMsg').textContent='Enter and save your access token first.';return}
+const syms=[...new Set($('#aTick').value.toUpperCase().split(/[\s,;]+/).map(x=>x.replace(/[^A-Z0-9&-]/g,'')).filter(Boolean))];if(!syms.length)return;
+const st=$('#aSector').value;const log=[];const put=()=>$('#aMsg').innerHTML=log.join('<br>');$('#aGo').disabled=true;
+for(const sym of syms){log.push(`${sym}: fetching…`);put();try{const j=await fetchSym(sym);const hs=screenerHealth(j);setHealth(sym,'Screener',hs.issues,hs.crit);if(hs.crit.length)throw new Error('Screener layout changed — couldn\'t read '+hs.crit.join(', ')+'. Use the Excel import.');const {o,checks}=fromScreener(j,sym,st==='auto'?'other':st);o._autoSector=st==='auto';
+log[log.length-1]=`${sym}: checking BSE filings…`;put();let xi=[];try{const x=await fetchExchange(sym);xi=parseExchange(x,o,checks)}catch(e){xi=['BSE: '+(ERRTXT[e.code]||e.message||e.code)]}setHealth(sym,'BSE',xi,[]);
+const i=S.fund.findIndex(x=>x.ticker===sym);if(i>=0)S.fund[i]=o;else S.fund.push(o);S.checks[sym]=checks;S.pricesBy=S.pricesBy||{};S.pricesBy[sym]=o._prices;
+log[log.length-1]=`✓ ${sym} — ${esc(o.name)}`;put();runAll();
+if($('#aDraft').checked&&SAMPLE){log[log.length-1]+=' · Claude drafting…';put();try{await draftOne(sym);log[log.length-1]=log[log.length-1].replace(' · Claude drafting…',' · draft ready (accept it in Decisions)')}catch(e){log[log.length-1]=log[log.length-1].replace(' · Claude drafting…',' · draft failed: '+esc(e.code||e.message))}put()}}
+catch(e){log[log.length-1]=`✗ ${sym}: ${esc(ERRTXT[e.code]||e.message||e.code)}`;put();if((ERRTXT[e.code]&&e.code!=='tool_error')||['bad_token','no_token','network','rate'].includes(e.code))break}}
+const all=Object.values(S.pricesBy||{}).flat();if(all.length&&Object.keys(S.pricesBy).length>=5){S.prices=all;S.lab=runLab(all)}
+store('afqe2_checks',S.checks);persistFund();$('#fText').value=fundCSV(S.fund);$('#aGo').disabled=false;runAll();if(log.some(l=>l.startsWith('✓')))show('recs')};
+const DKEYS=['q_tech','q_network','q_scale','q_brand','q_diversity','q_portable','q_optionality','q_antifragile','q_secret','c_sellside','c_theme','f_opaque','f_keyman','f_minority','f_hype','f_narrative','f_blame'];
+async function draftOne(t){const r=S.res.find(x=>x.t===t);const s=S.fund.find(x=>x.ticker===t);if(!r||!s)throw new Error('not loaded');
+const facts={name:s.name,about:s._about||'',exchange_industry:s._industry||'',sector_given:s._autoSector?'unknown — please classify':s.sector_type,mcap_cr:s.mcap_cr,ps_now:f1(r.ps),ps_3y_ago:s.ps_3y,ev_ebitda:f1(r.evE),rev_cagr_5y:s.rev_cagr_5y,gross_margin_now_vs_3y:[s.gross_margin,s.gross_margin_3y],ebit_margin_now_vs_3y:[s.ebit_margin,s.ebit_margin_3y],roce_now_3y_min5y:[s.roce,s.roce_3y,s.roce_min_5y],cwip_pct_of_net_block:s.cwip_pct,cfo_to_pat_3y:f2(r.conv),net_debt_to_ebitda:f2(r.ndE),promoter_pct:s.promoter_pct,promoter_change_pp:s.promoter_chg_3y,dii_change_1y_pp:s.dii_chg_1y,shareholders_change_1y_pct:s.retail_chg_1y,latest_quarter_revenue_vs_prev_vs_lastyear:[s.rev_q,s.rev_pq,s.rev_ly],quarter_ebitda_margin_vs_prev_vs_lastyear:[s.ebitdam_q,s.ebitdam_pq,s.ebitdam_ly],implied_growth_by_price:pc(r.exp.implied)};
+const spec={q_tech:'0-2 proprietary technology / hard-to-copy process',q_network:'0-2 network effects',q_scale:'0-2 economies of scale',q_brand:'0-2 brand power',q_diversity:'0-2 many suppliers, customers, products and markets (no single dependency)',q_portable:'0-2 capability that carries over to other sectors (a platform, not one pipeline)',q_optionality:'0-3 pipeline of options: new molecules, products, markets',q_antifragile:'0/1 gains from disorder (share gains in downturns, supply-chain shifts)',q_secret:'0/1 a specific non-consensus thesis can be stated',c_sellside:'0/1 multiple bullish broker reports / rising targets right now',c_theme:'0/1 rides a currently hot market theme (AI, data centres, defence, etc.)',f_opaque:'0/1 opaque disclosure',f_keyman:'0/1 key-man dependence',f_minority:'0/1 minority-hostile structure',f_hype:'0/1 promotion-led price action',f_narrative:'0/1 narrative running ahead of numbers',f_blame:'0/1 management blames outside factors'};
+const prompt=`You are helping score an Indian listed company for a personal investment-screening tool built on Sajal Kapoor's antifragile framework. Score each item below. Use the data provided first; you may use general knowledge of the company, but then say "general knowledge — verify" in the reason. If neither gives real evidence, score 0 and say "not evident". Never invent figures. Be conservative: a high score needs specific evidence. Also classify sector_type as one of: ${Object.keys(SECT).join(', ')}.
+Items: ${JSON.stringify(spec)}
+Company data: ${JSON.stringify(facts)}
+Reply with JSON only, exactly: {"sector_type":"...","sector_why":"...","scores":{"<item>":{"v":<number>,"why":"<one short sentence>"}}} covering every item.`;
+const out=await SAMPLE.json(prompt,{modelTier:'default'});if(!out||!out.scores)throw new Error('no scores returned');
+const sc={};for(const k of DKEYS){const v=out.scores[k];if(v&&fin(+v.v))sc[k]={v:clamp(Math.round(+v.v),0,QMAX[k]||1),why:String(v.why||'').slice(0,200)}}
+S.drafts[t]={sector_type:(out.sector_type in SECT)?out.sector_type:null,sector_why:String(out.sector_why||'').slice(0,200),scores:sc,at:new Date().toISOString()};store('afqe2_drafts',S.drafts);if(S.open===t)detail(t,true)}
+function acceptDraft(t){const d=S.drafts[t];if(!d)return;S.over[t]=S.over[t]||{};for(const k in d.scores)S.over[t][k]=d.scores[k].v;store('afqe2_over',S.over);const s=S.fund.find(x=>x.ticker===t);if(s&&d.sector_type&&(s._autoSector||s.sector_type==='other')){s.sector_type=d.sector_type;s._autoSector=false;persistFund()}d.accepted=true;store('afqe2_drafts',S.drafts);runAll()}
+(function restore(){const f=store('afqe2_fund');if(Array.isArray(f)&&f.length&&!S.fund.length){S.fund=f.map(r=>{const o={};for(const [k,t] of COLS)o[k]=t==='num'?(r[k]==null?NaN:+r[k]):(r[k]||'');o._about=r._about||'';o._industry=r._industry||'';o._autoSector=!!r._autoSector;return o});setTimeout(()=>{$('#fText').value=fundCSV(S.fund);runAll()},0)}})();
+
+/* ---------- synthetic demo ---------- */
+function demo(){const rnd=mulberry(20261101),U=(a,b)=>a+(b-a)*rnd(),I=(a,b)=>Math.round(U(a,b)),R1=x=>+x.toFixed(1);
+// archetypes chosen to exercise each rule
+const A=['diverge','diverge','diverge','priced','priced','crowded','trap','trap','passpain','passpain','cycpeak','fragile','govern','scibubble','convex','convex','convex','mid','mid','heldbroken'];
+const ST={diverge:['cdmo_sm','pharma','engg'],priced:['fmcg','it_services'],crowded:['aerospace'],trap:['commodity_chem','auto_anc'],passpain:['cdmo_bio','specialty_chem'],cycpeak:['commodity_chem'],fragile:['engg'],govern:['pharma'],scibubble:['cdmo_sm'],convex:['specialty_chem','defence','pharma'],mid:['hospital','engg'],heldbroken:['it_services']};
+const cnt={};const rows=A.map((a,i)=>{cnt[a]=(cnt[a]||0);const st=ST[a][cnt[a]++%ST[a].length];const o={ticker:'DMO'+String(i+1).padStart(2,'0'),name:'Synthetic '+a+' '+(i+1),sector_type:st};
+const small=a==='convex'||a==='passpain'||a==='trap';o.mcap_cr=Math.round(small?U(500,5000):U(4000,40000));
+const ps={diverge:U(1.6,3),priced:U(7,10),crowded:U(9,13),trap:U(0.5,0.9),passpain:U(2.5,4),cycpeak:U(2.5,3.5),fragile:U(0.8,1.4),govern:U(1.5,2.5),scibubble:U(17,24),convex:U(1.2,2.8),mid:U(2.5,4),heldbroken:U(1.5,2.5)}[a];
+o.revenue_cr=Math.round(o.mcap_cr/ps);o.rev_cagr_5y=R1(U(a==='diverge'||a==='crowded'||a==='scibubble'?14:a==='trap'?1:6,a==='convex'?28:a==='trap'?6:22));
+o.gross_margin=R1(U(a==='trap'||a==='cycpeak'?22:40,a==='trap'?32:68));o.gross_margin_3y=R1(o.gross_margin+(a==='diverge'?-U(4,9):a==='trap'||a==='heldbroken'?U(3,8):U(-3,3)));o.gross_margin_sd=R1(U(1.5,a==='convex'||a==='cycpeak'?8:4));
+o.ebit_margin=R1(U(a==='passpain'?4:a==='trap'?2:12,a==='passpain'?9:a==='trap'?6:a==='cycpeak'?30:26));o.ebit_margin_3y=R1(o.ebit_margin+(a==='diverge'?-U(4,8):a==='trap'||a==='heldbroken'?U(3,7):a==='cycpeak'?-U(8,12):U(-2,2)));
+o.ebitda_cr=Math.round(o.revenue_cr*(o.ebit_margin+U(3,7))/100);o.depreciation_cr=Math.max(1,Math.round(o.revenue_cr*U(0.025,0.07)));
+o.net_debt_cr=Math.round(a==='fragile'?o.ebitda_cr*U(3.5,5):a==='priced'||a==='diverge'?-o.mcap_cr*U(0.01,0.06):o.ebitda_cr*U(-0.8,1.2));o.interest_cr=Math.round(Math.max(1,Math.max(0,o.net_debt_cr)*0.09+U(1,6)));
+const pat=o.revenue_cr*o.ebit_margin/100*0.75;o.pat_3y_cr=Math.round(pat*2.6);o.cfo_3y_cr=Math.round(o.pat_3y_cr*U(a==='govern'||a==='fragile'?0.2:0.7,a==='govern'?0.6:1.2));o.cfo_cr=Math.round(o.cfo_3y_cr/3*(a==='scibubble'&&i%2?-1:1));
+o.cfo_neg_years=a==='fragile'?I(3,4):a==='convex'?I(0,2):0;
+o.roce=R1(a==='passpain'?U(4,8):a==='trap'?U(4,9):a==='cycpeak'?U(32,40):U(14,34));o.roce_3y=R1(o.roce+(a==='diverge'?-U(6,12):a==='trap'||a==='heldbroken'?U(4,10):a==='cycpeak'?-U(15,20):U(-3,3)));o.roce_min_5y=R1(Math.min(o.roce,o.roce_3y)*U(0.7,0.95));
+o.cwip_pct=R1(a==='passpain'?U(30,60):U(0,12));o.cap_rnd_pct=R1(a==='convex'&&i%3===0?U(35,50):U(0,10));o.recv_days=I(50,110);o.recv_days_3y=o.recv_days+I(a==='diverge'?5:-10,a==='diverge'?25:10);
+o.ps_3y=R1(ps/(a==='diverge'?U(0.35,0.6):a==='priced'?U(1.6,2.2):a==='crowded'||a==='scibubble'?U(3,4.5):a==='trap'?U(0.4,0.7):U(0.8,1.3)));
+o.promoter_pct=R1(U(a==='govern'?30:42,72));o.promoter_chg_3y=R1(U(a==='govern'?-9:-2,3));o.pledge_pct=a==='govern'?R1(U(12,30)):0;o.dilution_3y=R1(U(0,a==='convex'?15:a==='fragile'?30:4));o.rnd_pct=R1(U(a==='convex'||a==='passpain'?4:0,a==='convex'?11:3));
+o.top_customer_pct=I(a==='passpain'?25:5,a==='passpain'?45:28);o.age_yrs=I(a==='convex'?8:18,60);o.rpt_pct=R1(U(0,a==='govern'?12:2));o.guidance_hit=+U(a==='govern'||a==='heldbroken'?.2:.55,.95).toFixed(2);o.auditor_flag=a==='govern'?1:0;
+o.dii_chg_1y=R1(a==='crowded'?-U(3,6):U(-1,3));o.retail_chg_1y=R1(a==='crowded'?U(25,40):U(-5,10));
+o.rev_pq=Math.round(o.revenue_cr/4*U(0.95,1.05));o.rev_ly=Math.round(o.revenue_cr/4*U(0.85,0.95));o.rev_q=Math.round(Math.max(o.rev_pq,o.rev_ly)*(a==='crowded'||a==='heldbroken'?U(0.92,0.98):U(1.0,1.08)));
+o.ebitdam_pq=R1(o.ebit_margin+U(3,6));o.ebitdam_ly=R1(o.ebitdam_pq-U(-1,2));o.ebitdam_q=R1(Math.max(o.ebitdam_pq,o.ebitdam_ly)+(a==='crowded'||a==='heldbroken'?-U(1,3):U(0,1.5)));
+o.price=+U(200,2500).toFixed(0);o.peak_price=Math.round(o.price*(a==='diverge'||a==='trap'?U(1.9,2.6):U(1.0,1.4)));
+o.held=a==='heldbroken'||a==='crowded'||a==='diverge'&&i===0||a==='priced'&&i===3?1:0;o.avg_cost=o.held?Math.round(o.price*(a==='heldbroken'?U(1.3,1.6):U(0.5,0.9))):'';
+o.milestone=o.held?(a==='heldbroken'?'Deal wins restart in 2 quarters':'Plant utilisation > 60%'):'';o.milestone_date=o.held?(a==='heldbroken'?'2026-06-30':'2027-09-30'):'';o.milestone_met=0;o.thesis_broken=a==='heldbroken'?1:0;
+o.q_tech=a==='diverge'||a==='priced'||a==='scibubble'?2:I(0,1);o.q_network=a==='priced'?I(0,1):0;o.q_scale=a==='priced'||a==='diverge'?2:I(0,1);o.q_brand=a==='priced'?2:0;
+o.q_diversity=a==='diverge'||a==='priced'?2:a==='passpain'?0:I(0,2);o.q_portable=a==='diverge'?2:a==='convex'||a==='passpain'?I(1,2):I(0,1);o.q_optionality=a==='convex'||a==='passpain'?I(2,3):a==='diverge'?2:I(0,1);
+o.q_antifragile=a==='convex'||a==='diverge'?I(0,1):0;o.q_secret=a==='convex'||a==='diverge'?I(0,1):0;o.c_sellside=a==='crowded'||a==='scibubble'||a==='priced'?1:0;o.c_theme=a==='crowded'||a==='scibubble'?1:0;
+o.f_opaque=a==='govern'?1:0;o.f_keyman=a==='convex'?I(0,1):0;o.f_minority=a==='govern'?1:0;o.f_hype=a==='scibubble'?1:0;o.f_narrative=a==='govern'||a==='crowded'?1:0;o.f_blame=a==='trap'||a==='heldbroken'?1:0;return o});
+const head=COLS.map(c=>c[0]);const q=v=>/[,"]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':v;const fcsv=head.join(',')+'\n'+rows.map(r=>head.map(k=>q(r[k]??'')).join(',')).join('\n');
+const M=96,lines=['date,ticker,close'];const mret=[];for(let t=0;t<M;t++)mret.push(U(-.06,.07));
+rows.forEach(r=>{let p=100,mu=U(-.01,.02);for(let t=0;t<M;t++){const d=new Date(Date.UTC(2018,10+t+1,0));mu=0.93*mu+0.0055*((rnd()+rnd()+rnd()-1.5)*2)+0.0006;const e=(rnd()+rnd()+rnd()+rnd()-2)*0.06;p*=Math.max(0.3,1+mu+0.9*mret[t]+e);lines.push(d.toISOString().slice(0,10)+','+r.ticker+','+p.toFixed(2))}});
+$('#fText').value=fcsv;$('#pText').value=lines.join('\n');loadFund(fcsv);loadPrices(lines.join('\n'));$('#fMsg').textContent=rows.length+' synthetic stocks loaded.';$('#pMsg').textContent=(lines.length-1)+' synthetic price rows loaded.';runAll();show('recs')}
+$('#demo').onclick=demo;
+
+/* ---------- Signal Lab ---------- */
+function ranks(a){const idx=a.map((v,i)=>[v,i]).sort((x,y)=>x[0]-y[0]);const r=new Array(a.length);for(let i=0;i<idx.length;){let j=i;while(j+1<idx.length&&idx[j+1][0]===idx[i][0])j++;const av=(i+j)/2+1;for(let k=i;k<=j;k++)r[idx[k][1]]=av;i=j+1}return r}
+function pearson(x,y){const mx=mean(x),my=mean(y);let a=0,b=0,c=0;for(let i=0;i<x.length;i++){a+=(x[i]-mx)*(y[i]-my);b+=(x[i]-mx)**2;c+=(y[i]-my)**2}return b&&c?a/Math.sqrt(b*c):NaN}
+const spearman=(x,y)=>pearson(ranks(x),ranks(y));
+function runLab(prices){const m={};for(const p of prices){const ym=p.date.slice(0,7);(m[ym]=m[ym]||{});const c=m[ym][p.ticker];if(!c||p.date>c.d)m[ym][p.ticker]={d:p.date,c:p.close}}
+const months=Object.keys(m).sort(),tick=[...new Set(prices.map(p=>p.ticker))];const T=months.length;
+const C=tick.map(t=>months.map(ym=>m[ym][t]?m[ym][t].c:NaN));const R=C.map(c=>c.map((v,i)=>i?v/c[i-1]-1:NaN));
+const SIG={'MOM 12-1':(i,t)=>C[i][t-1]/C[i][t-12]-1,'REV 1M':(i,t)=>-R[i][t],'LOW VOL':(i,t)=>{const s=R[i].slice(t-11,t+1);return s.every(fin)?-sdev(s):NaN},'TREND 10M':(i,t)=>{const s=C[i].slice(t-9,t+1);return s.every(fin)?C[i][t]/mean(s)-1:NaN}};
+const h=Math.max(1,Math.round(P.h)),out={months,tick,sig:{},T,h,ok:false,msg:''};
+if(tick.length<5||T<12+h+12){out.msg=`Need ≥ 5 tickers and ≥ ${24+h} months; have ${tick.length} tickers, ${T} months.`;return out}
+for(const name in SIG){const f=SIG[name],ics=[];for(let t=12;t<T-h;t++){const x=[],y=[];for(let i=0;i<tick.length;i++){const s=f(i,t),fw=C[i][t+h]/C[i][t]-1;if(fin(s)&&fin(fw)){x.push(s);y.push(fw)}}if(x.length>=5){const ic=spearman(x,y);if(fin(ic))ics.push({t,ic})}}
+const cut=Math.floor(ics.length*(1-P.oosFrac/100));const is=ics.slice(0,cut).map(d=>d.ic),oos=ics.slice(cut).map(d=>d.ic);
+const st=a=>{const mu=a.length?mean(a):NaN,s=sdev(a);return{mu,s,t:fin(s)&&s>0?mu/(s/Math.sqrt(a.length))*Math.sqrt(1/h):NaN,n:a.length,hit:a.length?a.filter(v=>v>0).length/a.length:NaN}};
+const IS=st(is),OOS=st(oos);const accept=fin(IS.t)&&Math.abs(IS.t)>=P.tmin&&fin(OOS.mu)&&Math.sign(OOS.mu)===Math.sign(IS.mu);
+out.sig[name]={ics,IS,OOS,accept,w:accept?IS.mu/IS.s:0,cutT:ics[cut]?ics[cut].t:null}}
+const tL=T-1,comp={},z={};for(const name in SIG){const v=tick.map((_,i)=>SIG[name](i,tL));const ok=v.filter(fin);const mu=mean(ok),s=sdev(ok);z[name]=v.map(x=>fin(x)&&s>0?(x-mu)/s:NaN)}
+const raw=tick.map((_,i)=>{let s=0,any=false;for(const n in SIG){const w=out.sig[n].w;if(w&&fin(z[n][i])){s+=w*z[n][i];any=true}}return any?s:NaN});
+const valid=raw.map((v,i)=>[v,i]).filter(d=>fin(d[0]));const rk=ranks(valid.map(d=>d[0]));valid.forEach((d,j)=>comp[tick[d[1]]]={score:d[0],pct:valid.length>1?(rk[j]-1)/(valid.length-1)*100:50});
+out.comp=comp;out.ok=true;out.anyAccepted=Object.values(out.sig).some(s=>s.accept);out.asOf=months[tL];return out}
+
+/* ---------- valuation (Mauboussin) ---------- */
+function dcf(nopat0,g,roce){const r=P.r/100,gT=P.gT/100;let v=0,n=nopat0;for(let t=1;t<=P.N;t++){n*=1+g;const reinv=g>0?Math.min(g/roce,2):0;v+=n*(1-reinv)/Math.pow(1+r,t)}const tv=n*(1+gT)*(1-Math.min(gT/roce,1))/(r-gT);return v+tv/Math.pow(1+r,P.N)}
+function expectations(s,roceUse,notes){const o={implied:NaN,gest:NaN,pBeat:NaN,E:NaN,kelly:NaN,flag:'',p10x:NaN,g10x:NaN,bull:NaN};const mu=P.mu/100,sd=P.sd/100,r=P.r/100;
+const nd=fin(s.net_debt_cr)?s.net_debt_cr:0;const ev=s.mcap_cr+nd;const nopat0=s.revenue_cr*s.ebit_margin/100*(1-P.tax/100);
+if(!fin(ev)||!fin(nopat0)){o.flag='insufficient data';notes.push('Expectations: missing mcap, revenue or EBIT margin');return o}
+if(nopat0<=0){o.flag='loss-making';notes.push('Loss-making: no reverse DCF — a pure option, convex bucket at most');return o}
+const w=P.shrink/100;o.gest=fin(s.rev_cagr_5y)?w*s.rev_cagr_5y/100+(1-w)*mu:mu;
+const roce=roceUse;
+// scale test: NOPAT growth needed for 10x equity value in 10 yrs at the exit multiple
+o.g10x=Math.pow(10*s.mcap_cr/(P.exitMult*nopat0),1/10)-1;o.p10x=1-Phi((o.g10x-o.gest)/sd);
+if(roce<=r){const v0=dcf(nopat0,0,roce);o.flag='ROCE ≤ cost of capital';if(ev>v0){o.pBeat=0.1;notes.push(`ROCE ${f1(roce*100)}% ≤ cost of equity and no passing-pain evidence: growth destroys value, yet the price exceeds no-growth value`)}else{o.pBeat=0.55;notes.push('ROCE ≤ cost of equity but priced below no-growth value: cheap, value-trap risk')}}
+else{let lo=-0.3,hi=0.6;if(ev>dcf(nopat0,hi,roce)){o.implied=hi;o.flag='implied > 60%'}else if(ev<dcf(nopat0,lo,roce)){o.implied=lo}else{for(let k=0;k<80;k++){const md=(lo+hi)/2;if(dcf(nopat0,md,roce)>ev)hi=md;else lo=md}o.implied=(lo+hi)/2}o.pBeat=1-Phi((o.implied-o.gest)/sd)}
+const sc=[[0.25,o.gest-sd],[0.5,o.gest],[0.25,o.gest+sd]].map(([p,g])=>[p,clamp((dcf(nopat0,g,roce)-nd)/s.mcap_cr-1,-0.95,5)]);
+o.E=sc.reduce((a,[p,x])=>a+p*x,0);const varr=sc.reduce((a,[p,x])=>a+p*(x-o.E)**2,0);o.kelly=o.E>0&&varr>0?o.E/varr:0;o.sc=sc;o.bull=sc[2][1];return o}
+
+/* ---------- scoring ---------- */
+function q(s,k){const o=S.over[s.ticker];if(o&&k in o)return o[k];const v=s[k];return fin(v)?v:0}
+function score(s){const miss=[],notes=[],gates=[];const r={t:s.ticker,name:s.name,st:s.sector_type,s,notes,miss,gates};
+const sec=SECT[s.sector_type]||SECT.other;const tol=sec[0]??P.ndEdef,plMax=sec[1]??P.pledgeDef,sci=!!sec[2],depG=!!sec[3],cyc=!!sec[4];r.tol=tol;r.plMax=plMax;
+const nd=fin(s.net_debt_cr)?s.net_debt_cr:NaN;const ndE=fin(nd)&&fin(s.ebitda_cr)?(s.ebitda_cr>0?nd/s.ebitda_cr:(nd>0?99:-1)):NaN;
+const ebit=s.revenue_cr*s.ebit_margin/100;const cov=fin(ebit)&&fin(s.interest_cr)?(s.interest_cr>0?ebit/s.interest_cr:99):NaN;
+const cashY=fin(nd)&&s.mcap_cr>0?-nd/s.mcap_cr:NaN;const ps=s.mcap_cr/s.revenue_cr;const evE=fin(s.ebitda_cr)&&s.ebitda_cr>0?(s.mcap_cr+(fin(nd)?nd:0))/s.ebitda_cr:NaN;
+const mDep=fin(s.depreciation_cr)&&s.depreciation_cr>0?s.mcap_cr/s.depreciation_cr:NaN;const conv=fin(s.cfo_3y_cr)&&fin(s.pat_3y_cr)&&s.pat_3y_cr>0?s.cfo_3y_cr/s.pat_3y_cr:NaN;
+Object.assign(r,{ndE,cov,ps,evE,mDep,conv,cashY});
+/* via negativa */
+if(fin(ndE)&&ndE>tol)gates.push(`Company debt: net debt/EBITDA ${f1(ndE)} > ${tol} (sector trough tolerance)`);
+if(fin(cov)&&cov<P.cov)gates.push(`Interest cover ${f1(cov)}× < ${P.cov}×`);
+if(fin(s.pledge_pct)&&s.pledge_pct>plMax)gates.push(`Owner debt: pledge ${f1(s.pledge_pct)}% > ${plMax}% (sector pledge sensitivity)`);
+if(fin(s.cfo_neg_years)&&s.cfo_neg_years>=P.cfoNeg)gates.push(`Negative CFO in ${s.cfo_neg_years} of 5 yrs`);
+if(fin(s.dilution_3y)&&s.dilution_3y>P.dil)gates.push(`3-yr dilution ${f1(s.dilution_3y)}% > ${P.dil}%`);
+if(s.auditor_flag===1)gates.push('Auditor flag');
+if(depG&&fin(ps)&&ps>P.psMax&&fin(mDep)&&mDep>P.depMax)gates.push(`P/S ${f1(ps)} > ${P.psMax} AND mcap ÷ depreciation ${Math.round(mDep)}× > ${P.depMax}×`);
+else if(sci&&fin(ps)&&ps>P.psMax)notes.push(`P/S ${f1(ps)} is above ${P.psMax}: one leg of his science/tech cut-off. The removal rule needs it together with mcap ÷ depreciation above ${P.depMax}× (CDMO/defence/aero); here that's ${fin(mDep)?Math.round(mDep)+'×':'unknown'}.`);
+if(sci&&fin(s.cfo_cr)&&s.cfo_cr<0&&fin(mDep)&&mDep>P.depNegMax)gates.push(`Negative CFO with mcap ÷ depreciation ${Math.round(mDep)}× > ${P.depNegMax}×`);
+/* capital-lag stage */
+const roceN=s.roce,roce3=s.roce_3y;let stage='–',passingPain=false;
+if(fin(roceN)){const gm=s.gross_margin;
+if(roceN<P.r+P.ppRoceGap&&fin(s.cwip_pct)&&s.cwip_pct>=P.ppCwip&&fin(gm)&&gm>=P.ppGM&&!(fin(ndE)&&ndE>tol)){stage='Early investment (passing pain)';passingPain=true}
+else if(fin(roce3)&&roceN-roce3>=3&&roceN<25)stage='Gates / ramp-up';
+else if(cyc&&roceN>=P.peakRoce)stage='Cyclical peak';
+else if(roceN>=18&&(!fin(roce3)||roceN-roce3>-3))stage='Harvest';
+else if(fin(s.roce_min_5y)&&roceN-s.roce_min_5y>=8&&roceN>=P.r)stage='Recovering from trough';
+else if(fin(roce3)&&roceN-roce3<=-3)stage='Fading';
+else stage='Mature / steady'}
+r.stage=stage;r.passingPain=passingPain;if(stage==='Cyclical peak')notes.push(`ROCE ${f1(roceN)}% in a cyclical sector: more likely a peak to sell into than a base to buy on`);
+/* resilience R */
+const capPen=fin(s.cap_rnd_pct)?clamp((s.cap_rnd_pct-P.capRnd*0.5)/(P.capRnd*0.5),0,1)*2:0;if(fin(s.cap_rnd_pct)&&s.cap_rnd_pct>P.capRnd)notes.push(`Capitalised R&D ${f1(s.cap_rnd_pct)}% of net worth: a forecast miss forces write-downs (concave payoff)`);
+r.R=clamp((fin(ndE)?clamp((tol-ndE)/Math.max(tol,0.5),0,1)*3:(miss.push('leverage'),1.5))+lin(cov,2,10,2,miss,'interest cover')+lin(conv,0.4,1.0,2,miss,'cash conversion')+(fin(s.top_customer_pct)?clamp((50-s.top_customer_pct)/40,0,1)*1.5:(miss.push('customer concentration'),.75))+(fin(s.gross_margin_sd)?clamp((10-s.gross_margin_sd)/8,0,1)*1:(miss.push('margin stability'),.5))+lin(cashY,0,0.1,0.5,miss,'net cash')-capPen,0,10);
+/* hurdle (quarterly) */
+let hurdle='n/a';if(fin(s.rev_q)&&(fin(s.rev_pq)||fin(s.rev_ly))){const hr=Math.max(fin(s.rev_pq)?s.rev_pq:-1,fin(s.rev_ly)?s.rev_ly:-1);const okR=s.rev_q>=hr;let okM=true,hm=NaN;if(fin(s.ebitdam_q)&&(fin(s.ebitdam_pq)||fin(s.ebitdam_ly))){hm=Math.max(fin(s.ebitdam_pq)?s.ebitdam_pq:-99,fin(s.ebitdam_ly)?s.ebitdam_ly:-99);okM=s.ebitdam_q>=hm}
+const strict=fin(ps)&&ps>=8;hurdle=(okR&&okM)?'PASS':(!strict&&(okR||okM))?'PASS (1 miss tolerated)':'MISS';r.hurdleTxt=`Revenue ${s.rev_q} vs bar ${hr} ${okR?'✓':'✗'}`+(fin(hm)?` · EBITDA margin ${f1(s.ebitdam_q)}% vs bar ${f1(hm)}% ${okM?'✓':'✗'}`:'')+(strict?' · rich valuation: both must clear':'')}
+r.hurdle=hurdle;
+/* trajectory T */
+const dRoce=fin(roceN)&&fin(roce3)?roceN-roce3:NaN,dGM=fin(s.gross_margin)&&fin(s.gross_margin_3y)?s.gross_margin-s.gross_margin_3y:NaN,dEM=fin(s.ebit_margin)&&fin(s.ebit_margin_3y)?s.ebit_margin-s.ebit_margin_3y:NaN,dRD=fin(s.recv_days)&&fin(s.recv_days_3y)?s.recv_days-s.recv_days_3y:NaN;
+r.T=lin(dRoce,-10,10,3.5,miss,'ROCE 3y ago')+lin(dGM,-8,8,2.5,miss,'gross margin 3y ago')+lin(dEM,-8,8,2,miss,'EBIT margin 3y ago')+(fin(dRD)?clamp((30-dRD)/60,0,1)*1:(miss.push('receivable days 3y ago'),.5))+(hurdle==='n/a'?.5:hurdle==='MISS'?0:1);
+Object.assign(r,{dRoce,dGM,dEM,dRD});
+/* moat & optionality O */
+const thiel=(q(s,'q_tech')+q(s,'q_network')+q(s,'q_scale')+q(s,'q_brand'))/8;
+r.O=lin(s.gross_margin,20,70,2.5,miss,'gross margin')+(passingPain?1.4:lin(s.roce_min_5y,10,30,2,miss,'min ROCE'))+lin(s.rnd_pct,0,8,1,miss,'R&D')+thiel*1.5+q(s,'q_diversity')/2*1.5+q(s,'q_portable')/2*1.5;
+/* management M */
+const pp=s.promoter_pct;const skin=(fin(pp)?(pp>=40&&pp<=75?4:pp<40?clamp(pp/40,0,1)*4:clamp((90-pp)/15,0,1)*4):(miss.push('promoter %'),2))+lin(s.promoter_chg_3y,-5,2,3,miss,'promoter change')+(fin(s.pledge_pct)?clamp((10-s.pledge_pct)/10,0,1)*3:(miss.push('pledge'),1.5));
+const flags=[['f_opaque','opaque disclosure'],['f_keyman','key-man dependence'],['f_minority','minority-hostile structure'],['f_hype','promotion-led'],['f_narrative','narrative ahead of numbers']].filter(([k])=>q(s,k)>=1).map(x=>x[1]);r.flags=flags;
+r.gov=clamp(10-(fin(s.rpt_pct)?clamp((s.rpt_pct-1)/9,0,1)*3:(miss.push('RPT'),1.5))-(fin(s.guidance_hit)?clamp((0.8-s.guidance_hit)/0.6,0,1)*3:(miss.push('guidance record'),1.5))-flags.length*2,0,10);
+if(flags.length>=P.govFlags)gates.push(`${flags.length} red flags (${flags.join(', ')})`);if(r.gov<P.govMin)gates.push(`Governance ${f1(r.gov)} < ${P.govMin}`);
+r.M=clamp(0.5*skin+0.5*r.gov-q(s,'f_blame')*1.5,0,10);if(q(s,'f_blame'))notes.push('Management blames outside factors: listen for what they blame');
+/* expectations */
+const roceUse=passingPain?Math.max(P.r+6,fin(s.roce_min_5y)?s.roce_min_5y:0,fin(roce3)?roce3:0)/100:(fin(roceN)?roceN/100:(miss.push('ROCE'),P.r/100+0.03));
+if(passingPain)notes.push(`Passing pain: valued on a normalised ROCE of ${f1(roceUse*100)}% (assumption — edit thresholds in Settings), not today's ${f1(roceN)}%`);
+r.exp=expectations(s,roceUse,notes);const e=r.exp;
+/* valuation richness V */
+const vParts=[];if(fin(ps)&&ps>0)vParts.push(clamp(Math.log(ps)/Math.log(15),0,1)*10);if(fin(evE))vParts.push(clamp(Math.log(evE/8)/Math.log(60/8),0,1)*10);if(fin(e.implied))vParts.push(clamp(((e.implied-e.gest)/(P.sd/100)+2)/4,0,1)*10);else if(e.flag==='ROCE ≤ cost of capital')vParts.push(e.pBeat<0.3?7:3);
+r.V=vParts.length?mean(vParts):5;
+/* system S */
+r.S=0.30*r.R+0.30*r.T+0.25*r.O+0.15*r.M;
+r.nmos=Math.min(r.R,r.M,10-r.V);
+/* past position for arrows */
+if(fin(s.ps_3y)&&s.ps_3y>0){const psPast=clamp(Math.log(s.ps_3y)/Math.log(15),0,1)*10;const psNow=fin(ps)&&ps>0?clamp(Math.log(ps)/Math.log(15),0,1)*10:r.V;r.Vpast=clamp(r.V+(psPast-psNow),0,10);r.Spast=clamp(r.S-(r.T-5)*0.6,0,10);r.rerate=ps/s.ps_3y}
+/* progress vs option */
+r.prog=mean([r.T,fin(conv)?clamp(conv/1.0,0,1)*10:5,hurdle==='n/a'?5:hurdle==='MISS'?0:10]);
+const smallness=fin(s.mcap_cr)?clamp((Math.log10(20000)-Math.log10(Math.max(100,s.mcap_cr)))/(Math.log10(20000)-2.7),0,1)*10:5;
+r.opt=mean([q(s,'q_optionality')/3*10,smallness,fin(e.bull)?clamp(e.bull/2,0,1)*10:5,q(s,'q_portable')/2*10])+q(s,'q_antifragile')*0.5+q(s,'q_secret')*0.5;r.opt=clamp(r.opt,0,10);
+r.quad=r.prog>=5?(r.opt>=5?'Evidence + upside':'Proven, priced'):(r.opt>=5?'Possibility, not proof':'Too early');
+/* divergence */
+let div='–';if(fin(r.rerate)){if(r.T>=6&&r.rerate<=0.8)div='POSITIVE';else if(r.T<4&&r.rerate<=0.9)div='TRAP';else if(r.T>=5&&r.rerate>=1.5)div='PRICED IN';else if(r.T<5&&r.rerate>=1.3)div='NEGATIVE';else div='neutral'}
+if(r.V>=P.negDivV&&r.R<P.negDivR){div='NEGATIVE';gates.push(`Negative divergence: rich valuation (${f1(r.V)}) on a fragile system (resilience ${f1(r.R)})`)}
+r.div=div;
+/* crowding: six dots */
+const dots=[['Valuation re-rated',fin(r.rerate)&&r.rerate>=P.rerate],['Expectations priced in',fin(e.implied)&&e.implied>=e.gest+P.sd/100],['Hot narrative',q(s,'c_theme')>=1||q(s,'f_narrative')>=1||q(s,'f_hype')>=1],['Sell-side bullish',q(s,'c_sellside')>=1],['Institutions out, retail in',fin(s.dii_chg_1y)&&fin(s.retail_chg_1y)&&s.dii_chg_1y<0&&s.retail_chg_1y>10],['Sequential exam failed',hurdle==='MISS']];
+r.dots=dots;r.crowd=dots.filter(d=>d[1]).length;
+/* quant */
+r.quant=S.lab&&S.lab.ok&&S.lab.anyAccepted&&S.lab.comp[s.ticker]?S.lab.comp[s.ticker].pct:NaN;
+/* kill switch */
+const held=s.held===1;r.held=held;const fromCost=held&&fin(s.avg_cost)&&s.avg_cost>0&&fin(s.price)?s.price/s.avg_cost-1:NaN;r.fromCost=fromCost;
+const dd=fin(s.price)&&fin(s.peak_price)&&s.peak_price>0?1-s.price/s.peak_price:NaN;r.dd=dd;
+const ks=[];if(held){if(fin(fromCost)&&fromCost<=-P.invest/100)ks.push(P.regret==='overpay'&&fromCost<=-P.stop/100?['PRICE','Stop hit (overpay profile): exit']:['PRICE','Fallen '+p0(-fromCost)+' from cost: investigate — a signal, not a verdict']);
+if(s.milestone_date&&!q(s,'milestone_met')&&s.milestone_date<new Date().toISOString().slice(0,10))ks.push(['TIME',`Milestone "${s.milestone}" due ${s.milestone_date} not met: reassess`]);
+if(q(s,'thesis_broken'))ks.push(['THESIS','Original reason no longer holds: exit'])}
+r.ks=ks;
+/* bucket */
+const nmosMin=P.regret==='overpay'?P.nmosOverpay:P.nmosOwn;
+if(gates.length)r.bucket='AVOID';
+else if(held&&ks.some(k=>k[0]==='THESIS'||/Stop hit/.test(k[1])))r.bucket='EXIT';
+else if(r.crowd>=P.crowdTrim)r.bucket='TRIM';
+else if(r.S>=P.coreS&&r.nmos>=nmosMin&&((fin(e.E)&&e.E>0)||(div==='POSITIVE'&&r.V<=4))&&div!=='TRAP'&&div!=='NEGATIVE'&&!(P.regret==='overpay'&&r.V>P.overpayV)&&r.stage!=='Cyclical peak')r.bucket='CORE';
+else if(r.opt>=P.convO&&r.R>=P.convR&&(!fin(s.mcap_cr)||s.mcap_cr<=P.convMcap)&&r.stage!=='Cyclical peak')r.bucket='CONVEX';
+else r.bucket='WATCH';
+/* why-not and entry plan */
+const why=[];if(r.bucket==='WATCH'){if(r.S<P.coreS)why.push(`system ${f1(r.S)} < ${P.coreS}`);if(r.nmos<nmosMin)why.push(`net MoS ${f1(r.nmos)} < ${nmosMin}`);if(r.S>=P.coreS&&fin(e.E)&&e.E<=0&&div!=='POSITIVE')why.push('quality fully priced');if(div==='TRAP')why.push('cheap and getting worse');if(P.regret==='overpay'&&r.V>P.overpayV)why.push('valuation not undemanding enough for your regret profile');if(r.stage==='Cyclical peak')why.push('cyclical peak');if(r.opt<P.convO&&r.bucket==='WATCH'&&r.S<P.coreS)why.push(r.quad)}
+r.why=why;
+let plan='';if(r.bucket==='CORE'||r.bucket==='CONVEX'){if(P.regret==='own')plan=(fin(dd)&&dd>=P.ddEntry/100&&r.R>=6?`Down ${p0(dd)} from peak with the system intact: start accumulating. `:'')+'Stage it: 20% now · 20–30% on the next evidence point · final 50% just in time.';else plan=`Buy the planned size only at an undemanding price; hard stop ${P.stop}% below cost.`}
+if(r.crowd>=P.crowdCaution&&r.bucket!=='TRIM'&&r.bucket!=='AVOID')plan+=(plan?' ':'')+`${r.crowd} crowding signs: don't add.`;
+if(held&&fin(e.p10x)&&e.p10x*100<P.p10xSwitch&&r.bucket!=='EXIT')plan+=(plan?' ':'')+`Scale test weak (P(10× in 10 yrs) ${p0(e.p10x)}): look for a switch with more remaining asymmetry.`;
+r.plan=plan;
+r.rank=({CORE:0.45*r.S+0.35*r.nmos+0.2*(fin(r.quant)?r.quant/10:5),CONVEX:0.6*r.opt+0.25*r.R+0.15*(fin(r.quant)?r.quant/10:5),WATCH:0.5*r.S+0.5*r.opt,TRIM:r.crowd,EXIT:10,AVOID:-1})[r.bucket];
+return r}
+
+/* ---------- sizing ---------- */
+function size(res){const kf=P.kelly/100,cap=P.regret==='overpay'?P.capCoreOverpay:P.capCoreOwn;const core=res.filter(r=>r.bucket==='CORE'),cvx=res.filter(r=>r.bucket==='CONVEX');
+core.forEach(r=>{let w=cap*clamp(r.nmos/10,0,1);r.kellyW=clamp(kf*(r.exp.kelly||0)*100,0,cap);if(P.momOverlay&&fin(r.quant)&&r.quant<25)w/=2;r.w=w});
+cvx.forEach(r=>{let w=P.capConvex*Math.min(1,r.opt/8);if(P.momOverlay&&fin(r.quant)&&r.quant<25)w/=2;r.w=w});
+const scale=(arr,bud)=>{const s=arr.reduce((a,r)=>a+r.w,0);if(s>bud&&s>0)arr.forEach(r=>r.w*=bud/s)};scale(core,P.core);scale(cvx,P.convex);
+const bySec={};[...core,...cvx].forEach(r=>(bySec[r.st]=bySec[r.st]||[]).push(r));for(const k in bySec){const a=bySec[k],s=a.reduce((x,r)=>x+r.w,0);if(s>P.sectorCap){a.forEach(r=>{r.w*=P.sectorCap/s;r.secCapped=true})}}
+res.forEach(r=>{if(r.bucket!=='CORE'&&r.bucket!=='CONVEX')r.w=0});
+const sc=core.reduce((a,r)=>a+r.w,0),sv=cvx.reduce((a,r)=>a+r.w,0);return{core:sc,convex:sv,safe:100-sc-sv}}
+
+/* ---------- render ---------- */
+const BO={EXIT:0,TRIM:1,CORE:2,CONVEX:3,WATCH:4,AVOID:5};
+function runAll(){if(!S.fund.length)return;S.res=S.fund.map(score);S.alloc=size(S.res);S.res.sort((a,b)=>BO[a.bucket]-BO[b.bucket]||b.rank-a.rank);renderRecs();renderMap();renderLab();renderPort()}
+function why(r){if(r.gates.length)return '<span class="flag">'+esc(r.gates.join('; '))+'</span>';if(r.bucket==='EXIT')return '<span class="flag">'+esc(r.ks.map(k=>k[0]+': '+k[1]).join('; '))+'</span>';if(r.bucket==='TRIM')return esc(`${r.crowd}/6 crowding signs: `+r.dots.filter(d=>d[1]).map(d=>d[0]).join(', '));if(r.bucket==='WATCH')return esc('Not yet: '+r.why.join('; '));return esc(r.plan)}
+function renderRecs(){const res=S.res,cnt=b=>res.filter(r=>r.bucket===b).length;
+$('#recKpi').innerHTML=[['EXIT',cnt('EXIT')],['TRIM',cnt('TRIM')],['CORE',cnt('CORE')],['CONVEX',cnt('CONVEX')],['WATCH',cnt('WATCH')],['AVOID',cnt('AVOID')],['Regret profile',P.regret==='own'?'Own more':'Overpay']].map(([k,v])=>`<div><b>${v}</b><span>${k}</span></div>`).join('');
+const h=['#','Ticker','Action','Weight','System','Valuation','Net MoS','SV zone','Stage','Hurdle','Crowd','P(beat)','P(10×)','Quant','Why / plan'];
+$('#recTbl').innerHTML='<tr>'+h.map((x,i)=>`<th class="${i<3||i>=7&&i<=8||i==14?'l':''}">${x}</th>`).join('')+'</tr>'+res.map((r,i)=>`<tr class="click" data-t="${esc(r.t)}"><td>${i+1}</td><td class="l"><b>${esc(r.t)}</b>${r.held?' <span class="small">(held)</span>':''}<div class="small mut">${esc(r.name)} · ${esc(r.st)}</div></td><td class="l"><span class="pill ${r.bucket}">${r.bucket}</span></td><td>${r.w?r.w.toFixed(1)+'%':'–'}</td><td>${f1(r.S)}</td><td>${f1(r.V)}</td><td>${f1(r.nmos)}</td><td class="l">${esc(r.div)}</td><td class="l small">${esc(r.stage)}</td><td>${esc(r.hurdle.replace(' (1 miss tolerated)','*'))}</td><td>${r.crowd}/6</td><td>${fin(r.exp.pBeat)?p0(r.exp.pBeat):'–'}</td><td>${p0(r.exp.p10x)}</td><td>${fin(r.quant)?r.quant.toFixed(0):'–'}</td><td class="l wrap small">${why(r)}</td></tr>`).join('');
+document.querySelectorAll('#recTbl tr.click').forEach(tr=>tr.onclick=()=>detail(tr.dataset.t));if(S.open)detail(S.open,true)}
+function draftBlock(t){const d=S.drafts&&S.drafts[t];const can=!!SAMPLE;if(!d)return can?`<h3>Claude's draft</h3><p class="small"><button class="g" data-draft="${esc(t)}">Draft judgement with Claude</button></p>`:'';
+return `<h3>Claude's draft ${d.accepted?'<span class="small good">(accepted)</span>':''}</h3>${d.sector_type?`<p class="small">Sector: <b>${esc(d.sector_type)}</b> — ${esc(d.sector_why)}</p>`:''}<div class="tbl"><table><tr><th class="l">Item</th><th>Score</th><th class="l">Why</th></tr>${Object.entries(d.scores).map(([k,v])=>`<tr><td class="l">${QLBL[k]||k}</td><td>${v.v}</td><td class="l wrap small">${esc(v.why)}</td></tr>`).join('')}</table></div><p class="small"><button class="b" data-accept="${esc(t)}">Accept all</button> <button class="g" data-draft="${esc(t)}">Redraft</button> <span class="mut">Edit any single score in the checklist below.</span></p>`}
+function detail(t,keep){const r=S.res.find(x=>x.t===t);if(!r)return;S.open=t;const d=$('#detail');d.style.display='block';const s=r.s,e=r.exp;
+const sel=k=>{const mx=QMAX[k]||1,cur=q(s,k);let o='';for(let v=0;v<=mx;v++)o+=`<option value="${v}" ${v==cur?'selected':''}>${v}</option>`;return `<select data-q="${k}">${o}</select>`};
+const survival=r.gates.length?'Fails via negativa':`Company debt ${f1(r.ndE)}× EBITDA (tolerance ${r.tol}) · owner debt (pledge) ${f1(s.pledge_pct)}% (tolerance ${r.plMax}%) · cash conversion ${f2(r.conv)} · resilience ${f1(r.R)}/10`;
+const five=[['1 · Crowd','What does everyone else believe?',`${r.crowd}/6 crowding signs: `+(r.dots.filter(x=>x[1]).map(x=>x[0]).join(', ')||'none')],
+['2 · Narrative','How confident are we becoming?',`${r.quad}. Evidence ${f1(r.prog)}/10 vs option ${f1(r.opt)}/10`+(r.prog<5&&r.opt>=5?' — certainty here would be built on story, not evidence.':'.')],
+['3 · Evidence vs price','What does the price require?',fin(e.implied)?`Price implies ${pc(e.implied)} NOPAT growth for 10 yrs; base-rate estimate ${pc(e.gest)}; P(beat) ${p0(e.pBeat)}.`:esc(e.flag||'n/a')],
+['4 · Survival','Could I be early, wrong or forced?',survival],
+['5 · Action','Act on the business, not the price',`<b>${r.bucket}</b>${r.w?` · ${r.w.toFixed(1)}%`:''}. ${why(r)}`]];
+d.innerHTML=`<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(r.t)} · ${esc(r.name)} <span class="pill ${r.bucket}">${r.bucket}</span></h2><button class="g" id="closeD">Close</button></div>
+<div class="kpi" style="margin-top:8px">${[['System',r.S],['Resilience',r.R],['Trajectory',r.T],['Moat & options',r.O],['Management',r.M],['Valuation (rich=10)',r.V],['Net MoS',r.nmos]].map(([k,v])=>`<div><b>${f1(v)}</b><span>${k}</span></div>`).join('')}</div>
+<h3>Before you decide — five checks</h3><div class="five">${five.map(([a,b,c])=>`<div><b>${a}</b><span class="mut small">${b}</span><br>${c}</div>`).join('')}</div>
+${r.gates.length?`<h3 class="flag">Via negativa — failed</h3><ul>${r.gates.map(g=>`<li class="flag">${esc(g)}</li>`).join('')}</ul>`:'<p class="good small">Passes all via-negativa rules.</p>'}
+<h3>System–valuation</h3><p class="small">Zone: <b>${esc(r.div)}</b>${fin(r.rerate)?` (P/S now ${f1(r.ps)} vs ${f1(s.ps_3y)} three years ago = ${f2(r.rerate)}×; trajectory ${f1(r.T)}/10)`:' (needs ps_3y)'}. Capital-lag stage: <b>${esc(r.stage)}</b> (ROCE ${f1(s.roce)}% vs ${f1(s.roce_3y)}% 3y ago; CWIP ${f1(s.cwip_pct)}% of net block).
+3-yr change: ROCE ${f1(r.dRoce)} pp · gross margin ${f1(r.dGM)} pp · EBIT margin ${f1(r.dEM)} pp · receivable days ${f1(r.dRD)}.</p>
+<p class="small">Quarterly hurdle: <b>${esc(r.hurdle)}</b>${r.hurdleTxt?' — '+esc(r.hurdleTxt):''}</p>
+<p class="small">Valuation: P/S ${f1(r.ps)} · EV/EBITDA ${f1(r.evE)} · mcap ÷ depreciation ${fin(r.mDep)?Math.round(r.mDep)+'×':'–'}. ${e.sc?`Re-rating scenarios (bear/base/bull): ${e.sc.map(x=>pc(x[1])).join(' / ')} → E[ret] ${pc(e.E)}, full Kelly ${f2(e.kelly)}.`:''} Scale test: 10× in 10 yrs needs ${pc(e.g10x)} NOPAT CAGR at ${P.exitMult}× exit → P ${p0(e.p10x)}.</p>
+${r.held?`<h3>Kill switch</h3><p class="small">From cost: ${pc(r.fromCost)} · milestone: ${esc(s.milestone||'none set')} ${s.milestone_date?'(due '+esc(s.milestone_date)+')':''}</p>${r.ks.length?'<ul class="small">'+r.ks.map(k=>`<li><b>${k[0]}</b> — ${esc(k[1])}</li>`).join('')+'</ul>':'<p class="small good">No trigger.</p>'}`:''}
+${r.notes.length?`<h3>Notes</h3><ul class="small">${r.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}
+${(S.checks&&S.checks[r.t])?`<p class="small mut">Data: ${esc(S.checks[r.t].join(' · '))}</p>`:''}${r.miss.length?`<p class="small mut">Missing (scored neutral): ${esc([...new Set(r.miss)].join(', '))}</p>`:''}${draftBlock(r.t)}
+<h3>Your judgement (edits re-score)</h3><div class="chk">${QKEYS.map(k=>`<label>${QLBL[k]} ${sel(k)}</label>`).join('')}</div>
+<div class="row" style="margin-top:8px"><button class="g" id="clrO">Revert to CSV values</button></div>`;
+d.querySelectorAll('[data-accept]').forEach(b=>b.onclick=()=>acceptDraft(b.dataset.accept));d.querySelectorAll('[data-draft]').forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent='Drafting…';try{await draftOne(b.dataset.draft)}catch(e){b.textContent='Draft failed: '+(e.code||e.message)}});d.querySelectorAll('select[data-q]').forEach(se=>se.onchange=()=>{(S.over[t]=S.over[t]||{})[se.dataset.q]=+se.value;store('afqe2_over',S.over);runAll()});
+$('#closeD').onclick=()=>{d.style.display='none';S.open=null};$('#clrO').onclick=()=>{delete S.over[t];store('afqe2_over',S.over);runAll()};
+if(!keep)d.scrollIntoView({behavior:'smooth',block:'start'})}
+$('#copyRes').onclick=()=>{const h=['ticker','action','weight_pct','system','resilience','trajectory','moat','management','valuation','net_mos','sv_zone','stage','hurdle','crowding','p_beat','p_10x','e_ret','quant_pct','reason'];
+const t=h.join(',')+'\n'+S.res.map(r=>[r.t,r.bucket,(r.w||0).toFixed(2),f2(r.S),f2(r.R),f2(r.T),f2(r.O),f2(r.M),f2(r.V),f2(r.nmos),r.div,'"'+r.stage+'"',r.hurdle,r.crowd,f2(r.exp.pBeat),f2(r.exp.p10x),f2(r.exp.E),f1(r.quant),'"'+(r.gates.join('; ')||r.plan||r.why.join('; ')).replace(/"/g,"'")+'"'].join(',')).join('\n');copy(t,$('#copyRes2'))};
+
+/* ---------- charts: B&W, Times New Roman, symbols ---------- */
+function mk(c,x,y,m,r){r=r||6;c.beginPath();c.lineWidth=1.5;c.strokeStyle='#000';
+if(m==='CORE'){c.arc(x,y,r,0,7);c.fillStyle='#000';c.fill();return}
+if(m==='CONVEX'){c.moveTo(x,y-r-1);c.lineTo(x+r+1,y+r);c.lineTo(x-r-1,y+r);c.closePath();c.fillStyle='#fff';c.fill();c.stroke();return}
+if(m==='WATCH'){c.rect(x-r,y-r,2*r,2*r);c.fillStyle='#fff';c.fill();c.stroke();return}
+if(m==='TRIM'){c.moveTo(x,y-r-1);c.lineTo(x+r+1,y);c.lineTo(x,y+r+1);c.lineTo(x-r-1,y);c.closePath();c.fillStyle='#000';c.fill();return}
+if(m==='AVOID'){c.moveTo(x-r,y-r);c.lineTo(x+r,y+r);c.moveTo(x+r,y-r);c.lineTo(x-r,y+r);c.lineWidth=2;c.stroke();return}
+c.moveTo(x-r-1,y);c.lineTo(x+r+1,y);c.moveTo(x,y-r-1);c.lineTo(x,y+r+1);c.lineWidth=2.5;c.stroke()}
+function renderMap(){const cv=$('#svChart'),c=cv.getContext('2d'),W=cv.width,H=cv.height;c.fillStyle='#fff';c.fillRect(0,0,W,H);if(!S.res.length)return;
+const L=95,T=55,Wp=W-L-40,Hp=H-T-95;const X=v=>L+v/10*Wp,Y=v=>T+Hp-v/10*Hp;
+c.fillStyle='#000';c.font='bold 22px "Times New Roman",Times,serif';c.textAlign='center';c.fillText('System–Valuation map',L+Wp/2,32);
+c.strokeStyle='#000';c.lineWidth=1.5;c.strokeRect(L,T,Wp,Hp);c.font='16px "Times New Roman",Times,serif';
+for(let v=0;v<=10;v+=2){c.beginPath();c.moveTo(L,Y(v));c.lineTo(L+6,Y(v));c.stroke();c.textAlign='right';c.fillText(v,L-8,Y(v)+5);c.beginPath();c.moveTo(X(v),T+Hp);c.lineTo(X(v),T+Hp-6);c.stroke();c.textAlign='center';c.fillText(v,X(v),T+Hp+20)}
+c.font='bold 18px "Times New Roman",serif';c.fillText('Valuation (0 = undemanding, 10 = rich)',L+Wp/2,T+Hp+48);c.save();c.translate(28,T+Hp/2);c.rotate(-Math.PI/2);c.fillText('System (0 = fragile, 10 = strong and improving)',0,0);c.restore();
+c.setLineDash([7,5]);c.lineWidth=1.2;c.beginPath();c.moveTo(X(0),Y(0));c.lineTo(X(10),Y(10));c.stroke();c.setLineDash([]);
+c.font='italic 15px "Times New Roman",serif';c.textAlign='left';c.fillText('business ahead of price',X(0.4),Y(9.4));c.textAlign='right';c.fillText('price ahead of business',X(9.6),Y(0.6));
+S.res.forEach(r=>{if(fin(r.Vpast)&&fin(r.Spast)&&(Math.abs(r.Vpast-r.V)>0.3||Math.abs(r.Spast-r.S)>0.3)){const x0=X(r.Vpast),y0=Y(r.Spast),x1=X(r.V),y1=Y(r.S);c.strokeStyle='#888';c.lineWidth=1;c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();const a=Math.atan2(y1-y0,x1-x0);c.beginPath();c.moveTo(x1-9*Math.cos(a-0.4),y1-9*Math.sin(a-0.4));c.lineTo(x1,y1);c.lineTo(x1-9*Math.cos(a+0.4),y1-9*Math.sin(a+0.4));c.stroke()}});
+c.font='bold 13px "Times New Roman",serif';S.res.forEach(r=>{mk(c,X(r.V),Y(r.S),r.bucket);c.fillStyle='#000';const rt=r.V>9;c.textAlign=rt?'right':'left';c.fillText(r.t,X(r.V)+(rt?-9:9),Y(r.S)-6)});
+const items=['CORE','CONVEX','WATCH','TRIM','AVOID','EXIT'];c.font='bold 15px "Times New Roman",serif';let lx=L+10;const ly=T+Hp+78;items.forEach(b=>{mk(c,lx,ly-5,b);c.fillStyle='#000';c.textAlign='left';c.fillText(b,lx+12,ly);lx+=Wp/6})}
+function axesBox(c,L,T,W,H){c.strokeStyle='#000';c.lineWidth=1.5;c.strokeRect(L,T,W,H)}
+const MARK=['o','s','^','d'];
+function marker(c,x,y,m,fill){c.beginPath();const r=5;if(m==='o')c.arc(x,y,r,0,7);else if(m==='s')c.rect(x-r,y-r,2*r,2*r);else if(m==='^'){c.moveTo(x,y-r-1);c.lineTo(x+r+1,y+r);c.lineTo(x-r-1,y+r);c.closePath()}else{c.moveTo(x,y-r-1);c.lineTo(x+r+1,y);c.lineTo(x,y+r+1);c.lineTo(x-r-1,y);c.closePath()}c.fillStyle=fill?'#000':'#fff';c.fill();c.lineWidth=1.5;c.strokeStyle='#000';c.stroke()}
+function renderLab(){const L=S.lab,o=$('#labOut'),cv=$('#icChart');if(!L){o.innerHTML='Load prices to run the lab.';cv.style.display='none';return}
+if(!L.ok){o.innerHTML=`<p class="flag">${esc(L.msg)}</p>`;cv.style.display='none';return}
+const rows=Object.entries(L.sig).map(([n,s])=>`<tr><td class="l"><b>${n}</b></td><td>${f2(s.IS.mu)}</td><td>${f2(s.IS.t)}</td><td>${s.IS.n}</td><td>${pc(s.IS.hit)}</td><td>${f2(s.OOS.mu)}</td><td>${f2(s.OOS.t)}</td><td>${s.OOS.n}</td><td class="l">${s.accept?'<span class="good">ACCEPT</span>':'<span class="flag">reject</span>'}</td><td>${f2(s.w)}</td></tr>`).join('');
+o.innerHTML=`<p class="small">${L.tick.length} tickers · ${L.T} months (${L.months[0]} → ${L.months[L.T-1]}) · ${L.h}-month forward returns.</p><div class="tbl"><table><tr><th class="l">Signal</th><th>IS mean IC</th><th>IS t</th><th>IS n</th><th>IS hit</th><th>OOS mean IC</th><th>OOS t</th><th>OOS n</th><th class="l">Verdict</th><th>Weight</th></tr>${rows}</table></div>
+${L.anyAccepted?`<p class="small">Composite from accepted signals as of ${L.asOf} feeds the "Quant" column.</p>`:'<div class="note"><b>No signal survived.</b> The quant layer stays neutral. On a small universe that is the most common honest result.</div>'}
+<p class="small mut">MOM 12-1 and TREND 10M overlap heavily; if both pass they double-count the same effect. Four signals tested, so t = 2 is a weak bar — raise it if you add more.</p>`;
+cv.style.display='block';const c=cv.getContext('2d'),Wd=cv.width,Ht=cv.height;c.fillStyle='#fff';c.fillRect(0,0,Wd,Ht);
+const Lm=95,Tm=50,Wp=Wd-Lm-30,Hp=Ht-Tm-85;const names=Object.keys(L.sig);const series=names.map(n=>{let cum=0;return L.sig[n].ics.map(d=>({t:d.t,y:cum+=d.ic}))});
+const all=series.flat();const tmin=12,tmax=L.T-1-L.h;let ymin=Math.min(0,...all.map(p=>p.y)),ymax=Math.max(0,...all.map(p=>p.y));const pad=(ymax-ymin)*0.08||1;ymin-=pad;ymax+=pad;
+const X=t=>Lm+(t-tmin)/(Math.max(1,tmax-tmin))*Wp,Y=y=>Tm+Hp-(y-ymin)/(ymax-ymin)*Hp;
+c.font='bold 22px "Times New Roman",Times,serif';c.fillStyle='#000';c.textAlign='center';c.fillText('Cumulative rank IC of price signals',Lm+Wp/2,30);axesBox(c,Lm,Tm,Wp,Hp);c.font='16px "Times New Roman",Times,serif';c.lineWidth=1.5;
+const rawSt=(ymax-ymin)/6,mag=Math.pow(10,Math.floor(Math.log10(rawSt))),st=[1,2,2.5,5,10].map(m=>m*mag).find(x=>x>=rawSt);for(let v=Math.ceil(ymin/st)*st;v<=ymax+1e-9;v+=st){const yy=Y(v);c.beginPath();c.moveTo(Lm,yy);c.lineTo(Lm+6,yy);c.stroke();c.textAlign='right';c.fillText((Math.abs(v)<1e-9?0:v).toFixed(st<1?1:0),Lm-8,yy+5)}
+const step=Math.max(1,Math.round((tmax-tmin)/6));for(let t=tmin;t<=tmax;t+=step){const xx=X(t);c.beginPath();c.moveTo(xx,Tm+Hp);c.lineTo(xx,Tm+Hp-6);c.stroke();c.textAlign='center';c.fillText(L.months[t],xx,Tm+Hp+20)}
+c.font='bold 18px "Times New Roman",Times,serif';c.textAlign='center';c.fillText('Month',Lm+Wp/2,Tm+Hp+46);c.save();c.translate(26,Tm+Hp/2);c.rotate(-Math.PI/2);c.fillText('Cumulative IC',0,0);c.restore();
+c.setLineDash([2,4]);c.lineWidth=1;c.beginPath();c.moveTo(Lm,Y(0));c.lineTo(Lm+Wp,Y(0));c.stroke();const cut=L.sig[names[0]].cutT;if(cut){c.beginPath();c.moveTo(X(cut),Tm);c.lineTo(X(cut),Tm+Hp);c.stroke();c.font='italic 15px "Times New Roman",serif';c.textAlign='left';c.fillText('out-of-sample →',X(cut)+5,Tm+18)}c.setLineDash([]);
+const dashes=[[],[8,4],[2,3],[10,3,2,3]];series.forEach((sr,i)=>{c.strokeStyle='#000';c.lineWidth=1.6;c.setLineDash(dashes[i]);c.beginPath();sr.forEach((p,j)=>j?c.lineTo(X(p.t),Y(p.y)):c.moveTo(X(p.t),Y(p.y)));c.stroke();c.setLineDash([]);const ev=Math.max(1,Math.round(sr.length/10));sr.forEach((p,j)=>{if(j%ev===0)marker(c,X(p.t),Y(p.y),MARK[i],i%2===1)})});
+c.font='bold 15px "Times New Roman",serif';c.textAlign='left';let lx=Lm+12;const ly=Tm+Hp+70;names.forEach((n,i)=>{c.setLineDash(dashes[i]);c.lineWidth=1.6;c.beginPath();c.moveTo(lx,ly-5);c.lineTo(lx+34,ly-5);c.stroke();c.setLineDash([]);marker(c,lx+17,ly-5,MARK[i],i%2===1);c.fillStyle='#000';c.fillText(n+(L.sig[n].accept?' (accepted)':''),lx+42,ly);lx+=Wp/4});
+$('#icCap').textContent='Rising line = the signal ranked stocks correctly month after month. Flat or falling after the out-of-sample marker = noise or decay.'}
+function renderPort(){const o=$('#portOut'),cv=$('#allocChart');if(!S.res.length){o.textContent='Load data first.';cv.style.display='none';return}const a=S.alloc;
+const held=S.res.filter(r=>r.w>0.05).sort((x,y)=>y.w-x.w);const acts=S.res.filter(r=>r.held&&(r.bucket==='EXIT'||r.bucket==='TRIM'));
+o.innerHTML=`<div class="kpi"><div><b>${a.safe.toFixed(1)}%</b><span>Safe side</span></div><div><b>${a.core.toFixed(1)}%</b><span>Core (budget ${P.core}%)</span></div><div><b>${a.convex.toFixed(1)}%</b><span>Convex (budget ${P.convex}%)</span></div><div><b>${held.length}</b><span>positions</span></div></div>
+<div class="note">Unused core/convex budget falls to the safe side rather than being forced into marginal names. Worst case if every convex bet goes to zero: <b>${a.convex.toFixed(1)}%</b>. Sector cap ${P.sectorCap}% so one sector going wrong can't force you out of another.</div>
+${acts.length?`<h3>Actions on what you hold</h3><ul class="small">${acts.map(r=>`<li><b>${esc(r.t)}</b> — <span class="pill ${r.bucket}">${r.bucket}</span> ${esc(r.bucket==='EXIT'?r.ks.map(k=>k[1]).join('; '):`${r.crowd}/6 crowding signs`)}</li>`).join('')}</ul>`:''}
+<div class="tbl"><table><tr><th class="l">Ticker</th><th class="l">Bucket</th><th>Weight</th><th class="l">Sizing basis</th></tr>${held.map(r=>`<tr><td class="l"><b>${esc(r.t)}</b> <span class="small mut">${esc(r.st)}</span></td><td class="l"><span class="pill ${r.bucket}">${r.bucket}</span></td><td>${r.w.toFixed(2)}%</td><td class="l small">${r.bucket==='CORE'?`cap ${P.regret==='overpay'?P.capCoreOverpay:P.capCoreOwn}% × net MoS ${f1(r.nmos)}/10 (fractional Kelly would say ${f1(r.kellyW)}%)`:`max-loss stake ${P.capConvex}% × option ${f1(r.opt)}/8`}${P.momOverlay&&fin(r.quant)&&r.quant<25?' · halved (signals)':''}${r.secCapped?' · sector-capped':''}</td></tr>`).join('')||'<tr><td colspan="4" class="l mut">Nothing qualifies — 100% safe side. That is a valid output.</td></tr>'}</table></div>`;
+const items=[{l:'SAFE',w:a.safe,b:'SAFE'},...held.map(r=>({l:r.t,w:r.w,b:r.bucket}))];cv.height=Math.max(260,120+items.length*30);cv.style.display='block';const c=cv.getContext('2d'),Wd=cv.width,Ht=cv.height;c.fillStyle='#fff';c.fillRect(0,0,Wd,Ht);
+const Lm=120,Tm=50,Wp=Wd-Lm-70,Hp=Ht-Tm-70,mx=Math.max(...items.map(i=>i.w),1);const bh=Hp/items.length;
+c.font='bold 22px "Times New Roman",serif';c.fillStyle='#000';c.textAlign='center';c.fillText('Barbell allocation',Lm+Wp/2,30);axesBox(c,Lm,Tm,Wp,Hp);
+const fillFor={SAFE:'#fff',CORE:'#000',CONVEX:'#888'};items.forEach((it,i)=>{const y=Tm+i*bh+bh*0.18,w=it.w/mx*Wp*0.92;c.fillStyle=fillFor[it.b];c.strokeStyle='#000';c.lineWidth=1.2;c.fillRect(Lm,y,w,bh*0.64);c.strokeRect(Lm,y,w,bh*0.64);
+if(it.b==='SAFE'){c.save();c.beginPath();c.rect(Lm,y,w,bh*0.64);c.clip();for(let x=Lm-bh;x<Lm+w;x+=8){c.beginPath();c.moveTo(x,y+bh*0.64);c.lineTo(x+bh*0.64,y);c.stroke()}c.restore()}
+c.fillStyle='#000';c.font='bold 15px "Times New Roman",serif';c.textAlign='right';c.fillText(it.l,Lm-8,y+bh*0.45);c.textAlign='left';c.font='15px "Times New Roman",serif';c.fillText(it.w.toFixed(1)+'%',Lm+w+6,y+bh*0.45)});
+c.font='bold 18px "Times New Roman",serif';c.textAlign='center';c.fillText('Portfolio weight (%)',Lm+Wp/2,Tm+Hp+30);
+c.font='bold 14px "Times New Roman",serif';c.textAlign='left';let lx=Lm;const ly=Tm+Hp+56;[['SAFE','Safe (hatched)'],['CORE','Core (black)'],['CONVEX','Convex (grey)']].forEach(([b,l])=>{c.fillStyle=fillFor[b];c.fillRect(lx,ly-11,18,12);c.strokeStyle='#000';c.strokeRect(lx,ly-11,18,12);c.fillStyle='#000';c.fillText(l,lx+24,ly);lx+=180})}
+
+/* ---------- nav ---------- */
+function show(id){document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id===id));document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===id));try{history.replaceState(null,'','#'+id)}catch(e){}}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>show(b.dataset.s));
+const hs=location.hash.slice(1);if(['data','map','recs','port','lab','set','about'].includes(hs))show(hs);
+setRegret(P.regret);
+window.__afqe={S,P,demo,runAll,setRegret};
+})();
+</script>
+</body>
+</html>

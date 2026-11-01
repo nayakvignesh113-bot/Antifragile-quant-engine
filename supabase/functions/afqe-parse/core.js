@@ -5,6 +5,10 @@ const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
 const sdev = (a) => { if (a.length < 2) return NaN; const m = mean(a); return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1)); };
 const num = (x) => { if (x == null) return NaN; const s = String(x).replace(/[,₹%\s]/g, ""); return s === "" ? NaN : parseFloat(s); };
+const f1=x=>fin(x)?x.toFixed(1):'–', f2=x=>fin(x)?x.toFixed(2):'–', pc=x=>fin(x)?(x*100).toFixed(1)+'%':'–', p0=x=>fin(x)?(x*100).toFixed(0)+'%':'–';
+function erf(x){const t=1/(1+0.3275911*Math.abs(x));const y=1-(((((1.061405429*t-1.453152027)*t)+1.421413741)*t-0.284496736)*t+0.254829592)*t*Math.exp(-x*x);return x>=0?y:-y}
+const Phi=z=>0.5*(1+erf(z/Math.SQRT2));
+function lin(x,x0,x1,pts,miss,label){if(!fin(x)){if(miss)miss.push(label);return pts/2}return clamp((x-x0)/(x1-x0),0,1)*pts}
 const SECT={financial:[null,null,0,0,0],fmcg:[3,20,0,0,0],saas:[0.5,5,1,0,0],it_services:[1,10,0,0,0],cro:[1,10,1,0,0],commodity_chem:[2,5,0,0,1],specialty_chem:[2,5,1,0,1],cdmo_sm:[2,5,1,1,0],cdmo_bio:[1,5,1,1,0],pharma:[2.5,10,1,0,0],semifab:[2.5,0,1,0,1],aerospace:[2,5,1,1,0],defence:[2,5,1,1,0],engg:[2.5,10,0,0,1],auto_anc:[2,10,0,0,1],hospital:[3,10,0,0,0],airline:[4,0,0,0,1],metals:[2,5,0,0,1],other:[null,null,0,0,0]};
 const COLS=[
 ['ticker','text','Symbol'],['name','text','Company name'],['sector_type','text','One of: '+Object.keys(SECT).join(', ')],
@@ -28,7 +32,12 @@ const COLS=[
 ['asset_turn','num','Sales ÷ net block, latest FY'],['asset_turn_peak','num','Best sales ÷ net block, last 5 FYs'],['cap_growth_3y','num','Growth in net block + CWIP, 3 yrs, %'],
 ['pe','num','P/E'],['peer_n','num','Companies in the industry median'],['peer_pe_med','num','Industry median P/E'],['peer_roce_med','num','Industry median ROCE, %'],['peer_sg_med','num','Industry median quarterly sales growth YoY, %'],['peer_pg_med','num','Industry median quarterly profit growth YoY, %'],['own_sg_q','num','Own quarterly sales growth YoY (peer basis), %'],['own_pg_q','num','Own quarterly profit growth YoY (peer basis), %'],['roce_peer_rank','num','ROCE rank among listed peers (1 = best)'],['peer_listed','num','Listed peers shown'],
 ['caps_auto','text','Capabilities and markets detected in the company description (auto, ; separated)'],['caps','text','Capability map (JSON: name, has/building, target market, stage, adjacency)'],
-['top5_customer_pct','num','Top 5 customers, % of revenue'],['cust_band','num','Customer spread 0–3 (0 one customer >50% · 1 top customer 25–50% · 2 top 5 >50%, none >25% · 3 broad)'],
+['top5_customer_pct','num','Top 5 customers, % of revenue'],
+['incr_roce_5y','num','Return on capital added over 5 yrs (ΔEBIT ÷ Δcapital employed ex-CWIP), %'],['capex_payoff','num','Capex payoff: sales per rupee of new net block ÷ old asset turn, 5 yrs'],['alloc_yrs','num','Years in the capital-allocation window'],['payout_avg_5y','num','Average dividend payout, 5 yrs, %'],['roce_avg_5y','num','Average ROCE, 5 yrs, %'],
+['mgmt_pay_pct','num','Promoter/KMP pay, % of net profit (annual report)'],['f_succession','num','Red flag: no visible succession, 0/1'],
+['adtv_cr','num','Average daily traded value, 6 months, ₹ Cr'],
+['rating_grade','text','Latest credit rating (agency, grade, outlook)'],['rating_score','num','Rating on a 0–10 scale (AAA = 10)'],['rating_chg','num','Change vs previous rating, notches×0.5'],['rating_outlook','text','Rating outlook'],['rating_action','text','Rating action'],['rating_date','text','Rating date'],['rating_liq','text','Agency liquidity assessment'],['rating_cust','text','What the rating report says about customers'],['rating_cust_pct','num','Customer share quoted in the rating report, %'],['rating_cust_kind','text','top1 / top5 / top10'],['rating_rpt','text','What the rating report says about related parties'],['rating_url','text','Rating report link'],
+['qty','num','Shares held'],['buy_date','text','First buy date YYYY-MM-DD (tax holding period)'],['cust_band','num','Customer spread 0–3 (0 one customer >50% · 1 top customer 25–50% · 2 top 5 >50%, none >25% · 3 broad)'],
 ['nm_name','text','New market / product being entered'],['nm_stage','num','New-market evidence stage 0–5 (0 none · 1 announced · 2 capex committed · 3 plant built / qualification · 4 first commercial revenue · 5 >10% of revenue)'],['nm_share','num','Expected share of revenue at maturity, %'],['nm_date','text','Date first commercial revenue is expected YYYY-MM-DD'],['nm_evidence','text','Evidence (link or note)'],
 ['held','num','1 if you own it'],['avg_cost','num','Your average cost'],['milestone','text','Thesis milestone (e.g. "Plant 2 utilisation > 60%")'],['milestone_date','text','Milestone due date YYYY-MM-DD'],['milestone_met','num','1 if met'],['thesis_broken','num','1 if the original reason no longer holds'],
 ['q_tech','num','Thiel: proprietary tech, 0–2'],['q_network','num','Thiel: network effects, 0–2'],['q_scale','num','Thiel: scale economies, 0–2'],['q_brand','num','Thiel: brand, 0–2'],
@@ -37,33 +46,50 @@ const COLS=[
 ['c_sellside','num','Crowding: multiple bullish broker reports / rising targets, 0/1'],['c_theme','num','Crowding: rides a hot theme (AI, data centres, defence…), 0/1'],
 ['f_opaque','num','Red flag: opaque disclosure / unexplained assets, 0/1'],['f_keyman','num','Red flag: key-man dependence, 0/1'],['f_minority','num','Red flag: minority-hostile structure, 0/1'],['f_hype','num','Red flag: promotion-led price action, 0/1'],['f_narrative','num','Red flag: narrative running ahead of numbers, 0/1'],['f_blame','num','Management blames outside factors rather than owning results, 0/1']
 ];
+const DEF={regret:'own',
+cov:2.5,cfoNeg:3,dil:25,govMin:4,govFlags:2,ndEdef:3,pledgeDef:10,psMax:15,depMax:400,depNegMax:200,negDivV:7,negDivR:5,
+r:12,gT:5,tax:25,N:10,mu:10,sd:8,shrink:30,exitMult:25,
+capRnd:30,ddEntry:50,crowdTrim:5,crowdCaution:3,rerate:2.5,peakRoce:30,ppRoceGap:3,ppCwip:20,ppGM:35,invest:25,stop:20,p10xSwitch:10,
+coreS:6.5,nmosOwn:5,nmosOverpay:6.5,overpayV:5,convO:6,convR:4.5,convMcap:15000,
+safe:20,core:65,convex:15,capCoreOwn:12,capCoreOverpay:8,capConvex:2.5,kelly:25,sectorCap:25,momOverlay:1,
+h:1,tmin:2,oosFrac:40,draftTier:0,peerW:20,fixedHi:25,headroom:1.3,accelPP:5,capMax:30,useBR:1,stcg:20,ltcg:12.5,ltcgFree:1.25,ltcgMonths:12,costRT:0.25,pfValue:0,adtvPart:20,themeCap:35};
+let P = Object.assign({}, DEF);
+const S = { over: {}, fund: [], scanRaw: [], _capU: [], _capF: { fq: {}, n: 0 }, lab: null, baseRates: null, promiseHit: {} };
 /*CORE-START*/ // pure parsing code, shared verbatim with supabase/functions/afqe-parse (generated by tools/build_edge.js)
 function tbl(html){if(!html)return null;const d=new DOMParser().parseFromString('<table>'+html.replace(/^\s*<table>|<\/table>\s*$/g,'')+'</table>','text/html');const cols=[...d.querySelectorAll('thead th')].map(t=>t.textContent.trim()).slice(1);const rows={};
 d.querySelectorAll('tbody tr').forEach(tr=>{const td=[...tr.querySelectorAll('td')];if(td.length<2)return;const k=td[0].textContent.replace(/ /g,' ').replace(/\+\s*$/,'').trim().split('  ')[0].trim();rows[k]=td.slice(1).map(x=>num(x.textContent))});return{cols,rows}}
 const tv=(T,row,col)=>{if(!T||!T.rows[row])return NaN;const i=T.cols.indexOf(col);return i<0?NaN:T.rows[row][i]};
 const sv=(o,row,col)=>o&&o[row]&&o[row][col]!=null?num(o[row][col]):NaN;
-function fromScreener(j,sym,st){const PL=tbl(j.profit_loss),Q=tbl(j.quarters),BS=tbl(j.balance_sheet),CFt=tbl(j.cash_flow),RT=tbl(j.ratios),SH=tbl(j.shareholding);const checks=[];
+function fromScreener(j,sym,st,lag){lag=lag|0;const PL=tbl(j.profit_loss),Q=lag?null:tbl(j.quarters),BS=tbl(j.balance_sheet),CFt=tbl(j.cash_flow),RT=tbl(j.ratios),SH=lag?null:tbl(j.shareholding);const checks=[];
 if(!PL||!PL.rows['Sales'])throw new Error('no sales table (banks/NBFCs are not supported)');
 const top={};(j.top||'').replace(/<li>(.*?)<\/li>/g,(m,x)=>{const t=x.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();const mm=t.match(/^(Market Cap|Current Price|High \/ Low|Stock P\/E|Book Value)\s*₹?\s*([\d,.]+)/);if(mm)top[mm[1]]=num(mm[2])});
-const yrs=PL.cols.filter(c=>c!=='TTM');const Y=k=>yrs[yrs.length-1-k];const hasTTM=PL.cols.includes('TTM');
+const yrs=PL.cols.filter(c=>c!=='TTM');const Y=k=>yrs[yrs.length-1-k-lag];const hasTTM=!lag&&PL.cols.includes('TTM');if(!Y(0))throw new Error('not enough history');
 const s=(r,c)=>tv(PL,r,c);const sales=c=>s('Sales',c);const ebit=c=>s('Profit before tax',c)+s('Interest',c)-(s('Other Income',c)||0);
 const qc=Q?Q.cols:[];const qsum=r=>{if(qc.length<4)return NaN;let a=0;for(const c of qc.slice(-4)){const v=tv(Q,r,c);if(!fin(v))return NaN;a+=v}return a};
-const ttm=r=>hasTTM&&fin(s(r,'TTM'))?s(r,'TTM'):qsum(r);
+const ttm=r=>lag?s(r,Y(0)):(hasTTM&&fin(s(r,'TTM'))?s(r,'TTM'):qsum(r));
 const tS=ttm('Sales'),tOP=ttm('Operating Profit'),tDep=ttm('Depreciation'),tInt=ttm('Interest'),tE=ttm('Profit before tax')+tInt-(ttm('Other Income')||0);
 if(hasTTM&&fin(qsum('Sales'))&&Math.abs(qsum('Sales')/s('Sales','TTM')-1)>0.03)checks.push(`TTM sales ${s('Sales','TTM')} vs sum of last 4 quarters ${qsum('Sales')}`);
-const mcap=top['Market Cap'],price=top['Current Price'];const bsLast=BS?BS.cols[BS.cols.length-1]:null;
+// prices
+let closes=[],adj=[],ts=[],vols=[];if(j.yahoo&&Array.isArray(j.yahoo.t)){ts=j.yahoo.t;closes=j.yahoo.close||[];adj=j.yahoo.c||closes;vols=j.yahoo.v||[]}
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const idxAt=target=>{let bi=-1,bd=1e18;ts.forEach((t,i)=>{const d=Math.abs(t-target);if(fin(closes[i])&&d<bd){bd=d;bi=i}});return bi>=0&&bd<20*86400?bi:-1};
+const lblT=(label,plusM)=>{const m=label&&label.match(/(\w{3}) (\d{4})/);if(!m)return NaN;return Date.UTC(+m[2],MO.indexOf(m[1])+(plusM||0),1)/1000};
+const pxAt=label=>{if(!ts.length)return NaN;const i=idxAt(lblT(label));return i>=0?closes[i]:NaN}; // Yahoo monthly bars are stamped at month start and close at month end
+const nowMcap=top['Market Cap'],nowPrice=top['Current Price'];const ec=c=>tv(BS,'Equity Capital',c);const ecNow=ec(yrs[yrs.length-1]);
+const sharesNow=fin(nowMcap)&&fin(nowPrice)&&nowPrice>0?nowMcap/nowPrice:NaN;
+// as-of point: today, or (for history replay) 4 months after the financial year closed, when annual results are public
+const asofI=lag?idxAt(lblT(Y(0),4)):-1;if(lag&&asofI<0)throw new Error('no price at as-of date');
+const price=lag?closes[asofI]:nowPrice;const shRatio=lag&&fin(ec(Y(0)))&&fin(ecNow)&&ecNow>0?ec(Y(0))/ecNow:1;
+const mcap=lag?(fin(price)&&fin(sharesNow)?price*sharesNow*shRatio:NaN):nowMcap;
+const bsLast=lag?Y(0):(BS?BS.cols[BS.cols.length-1]:null);
 const cashLast=j.assets?sv(j.assets,'Cash Equivalents',bsLast):NaN;const cashFY=j.assets?sv(j.assets,'Cash Equivalents',Y(0)):NaN;const cash=fin(cashLast)?cashLast:cashFY;
 if(!fin(cash))checks.push('Cash not available: net debt = gross borrowings (conservative)');
 const gm=c=>{const m=j.schedules?sv(j.schedules,'Material Cost %',c):NaN;return fin(m)?100-m:NaN};
 const roce=c=>tv(RT,'ROCE %',c);const last5=[0,1,2,3,4].map(Y).filter(Boolean);
 const gms=last5.map(gm).filter(fin),roces=last5.map(roce).filter(fin),cfos=last5.map(c=>tv(CFt,'Cash from Operating Activity',c)).filter(fin);
-// prices
-let closes=[],ts=[];if(j.yahoo&&Array.isArray(j.yahoo.t)){ts=j.yahoo.t;closes=j.yahoo.close||[]}
-const pxAt=label=>{const m=label&&label.match(/(\w{3}) (\d{4})/);if(!m||!ts.length)return NaN;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m[1]);const target=Date.UTC(+m[2],mo,1)/1000;let bi=-1,bd=1e18;ts.forEach((t,i)=>{const d=Math.abs(t-target);if(fin(closes[i])&&d<bd){bd=d;bi=i}});return bi>=0&&bd<20*86400?closes[bi]:NaN}; // Yahoo monthly bars are stamped at month start and close at month end
-const yPrice=j.yahoo&&fin(j.yahoo.price)?j.yahoo.price:NaN;if(fin(yPrice)&&fin(price)&&Math.abs(yPrice/price-1)>0.03)checks.push(`Price check: Screener ₹${price} vs Yahoo ₹${yPrice.toFixed(1)}`);
-const shares=fin(mcap)&&fin(price)&&price>0?mcap/price:NaN;const ec=c=>tv(BS,'Equity Capital',c);const p3=pxAt(Y(3));
-const mcap3=fin(p3)&&fin(shares)?p3*shares*(fin(ec(Y(3)))&&fin(ec(Y(0)))&&ec(Y(0))>0?ec(Y(3))/ec(Y(0)):1):NaN;
-const peak=closes.filter(fin).length?Math.max(...closes.filter(fin)):NaN;
+const yPrice=j.yahoo&&fin(j.yahoo.price)?j.yahoo.price:NaN;if(!lag&&fin(yPrice)&&fin(price)&&Math.abs(yPrice/price-1)>0.03)checks.push(`Price check: Screener ₹${price} vs Yahoo ₹${yPrice.toFixed(1)}`);
+const p3=pxAt(Y(3));const mcap3=fin(p3)&&fin(sharesNow)?p3*sharesNow*(fin(ec(Y(3)))&&fin(ecNow)&&ecNow>0?ec(Y(3))/ecNow:1):NaN;
+const upTo=lag?closes.slice(0,asofI+1):closes;const peak=upTo.filter(fin).length?Math.max(...upTo.filter(fin)):NaN;
 const shc=SH?SH.cols:[];const shv=(r,k)=>tv(SH,r,shc[shc.length-1-k]);
 const about=(j.about||'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();const fy=about.match(/(?:founded|incorporated|established|set up)\D{0,25}((?:19|20)\d{2})/i);
 const R1=x=>fin(x)?Math.round(x*10)/10:NaN,R0=x=>fin(x)?Math.round(x):NaN;
@@ -75,7 +101,7 @@ pat_3y_cr:R0([0,1,2].reduce((a,k)=>a+s('Net Profit',Y(k)),0)),cfo_3y_cr:R0([0,1,
 roce:R1(roce(Y(0))),roce_3y:R1(roce(Y(3))),roce_min_5y:roces.length?Math.min(...roces):NaN,cwip_pct:R1(tv(BS,'CWIP',bsLast)/tv(BS,'Fixed Assets',bsLast)*100),cap_rnd_pct:NaN,
 recv_days:R0(tv(RT,'Debtor Days',Y(0))),recv_days_3y:R0(tv(RT,'Debtor Days',Y(3))),ps_3y:sales(Y(3))>0?R1(mcap3/sales(Y(3))):NaN,
 promoter_pct:R1(shv('Promoters',0)),promoter_chg_3y:R1(shv('Promoters',0)-tv(SH,'Promoters',shc[0])),pledge_pct:NaN,
-dilution_3y:fin(ec(Y(3)))&&ec(Y(3))>0?R1((ec(Y(0))/ec(Y(3))-1)*100):NaN,rnd_pct:NaN,top_customer_pct:NaN,age_yrs:fy?new Date().getFullYear()-+fy[1]:NaN,rpt_pct:NaN,guidance_hit:NaN,auditor_flag:NaN,
+dilution_3y:fin(ec(Y(3)))&&ec(Y(3))>0?R1((ec(Y(0))/ec(Y(3))-1)*100):NaN,rnd_pct:NaN,top_customer_pct:NaN,age_yrs:fy?new Date().getFullYear()-lag-+fy[1]:NaN,rpt_pct:NaN,guidance_hit:NaN,auditor_flag:NaN,
 dii_chg_1y:R1(shv('DIIs',0)-shv('DIIs',4)),retail_chg_1y:R1((shv('No. of Shareholders',0)/shv('No. of Shareholders',4)-1)*100),
 rev_q:R0(tv(Q,'Sales',qc[qc.length-1])),rev_pq:R0(tv(Q,'Sales',qc[qc.length-2])),rev_ly:R0(tv(Q,'Sales',qc[qc.length-5])),
 ebitdam_q:tv(Q,'OPM %',qc[qc.length-1]),ebitdam_pq:tv(Q,'OPM %',qc[qc.length-2]),ebitdam_ly:tv(Q,'OPM %',qc[qc.length-5]),
@@ -87,16 +113,46 @@ const opm=c=>{const a=s('Operating Profit',c),b=sales(c);return fin(a)&&fin(b)&&
 {const dS=sales(Y(0))-sales(Y(3)),dO=s('Operating Profit',Y(0))-s('Operating Profit',Y(3));o.incr_margin_3y=fin(dS)&&fin(dO)&&sales(Y(3))>0&&dS/sales(Y(3))>=0.1?R1(dO/dS*100):NaN}
 {const gS=sales(Y(0))/sales(Y(1))-1,e0=ebit(Y(0)),e1=ebit(Y(1));o.dol_1y=fin(gS)&&Math.abs(gS)>=0.05&&fin(e0)&&fin(e1)&&e1>0?R1((e0/e1-1)/gS):NaN}
 {const sch=k=>j.schedules?sv(j.schedules,k,Y(0)):NaN;const fx=['Employee Cost %','Manufacturing Cost %','Other Cost %'].map(sch);const dep=s('Depreciation',Y(0))/sales(Y(0))*100;o.fixed_cost_pct=fx.every(fin)&&fin(dep)?R1(fx[0]+fx[1]+fx[2]+dep):NaN}
-{const fa=c=>tv(BS,'Fixed Assets',c),cw=c=>tv(BS,'CWIP',c);const at=[0,1,2,3,4].map(k=>{const c=Y(k);return c&&fin(fa(c))&&fa(c)>0&&fin(sales(c))?sales(c)/fa(c):NaN}).filter(fin);
+const fa=c=>tv(BS,'Fixed Assets',c),cw=c=>tv(BS,'CWIP',c);
+{const at=[0,1,2,3,4].map(k=>{const c=Y(k);return c&&fin(fa(c))&&fa(c)>0&&fin(sales(c))?sales(c)/fa(c):NaN}).filter(fin);
 o.asset_turn=fin(fa(Y(0)))&&fa(Y(0))>0?Math.round(sales(Y(0))/fa(Y(0))*100)/100:NaN;o.asset_turn_peak=at.length?Math.round(Math.max(...at)*100)/100:NaN;
 const c0=fa(Y(0))+(cw(Y(0))||0),c3=fa(Y(3))+(cw(Y(3))||0);o.cap_growth_3y=fin(c0)&&fin(c3)&&c3>0?R0((c0/c3-1)*100):NaN}
-o.pe=fin(top['Stock P/E'])?top['Stock P/E']:NaN;Object.assign(o,parsePeers(j.peers,mcap));if(o._peers&&!o._peers.length)delete o._peers;
+// capital allocation record (people, measured by outcomes)
+{const ce=c=>{const v=(tv(BS,'Equity Capital',c)||0)+(tv(BS,'Reserves',c)||0)+(tv(BS,'Borrowings',c)||0)-(cw(c)||0);return fin(tv(BS,'Reserves',c))?v:NaN};
+const k5=Y(5)?5:Y(4)?4:Y(3)?3:0;if(k5){const dE=ebit(Y(0))-ebit(Y(k5)),dC=ce(Y(0))-ce(Y(k5));o.incr_roce_5y=fin(dE)&&fin(dC)&&ce(Y(k5))>0&&dC/ce(Y(k5))>=0.15?R1(dE/dC*100):NaN;
+const dS=sales(Y(0))-sales(Y(k5)),dF=fa(Y(0))-fa(Y(k5)),t0=fa(Y(k5))>0?sales(Y(k5))/fa(Y(k5)):NaN;o.capex_payoff=fin(dS)&&fin(dF)&&fin(t0)&&t0>0&&dF/fa(Y(k5))>=0.15?Math.round(dS/dF/t0*100)/100:NaN;o.alloc_yrs=k5}
+const po=last5.map(c=>s('Dividend Payout %',c)).filter(fin);o.payout_avg_5y=po.length?R0(mean(po)):NaN;o.roce_avg_5y=roces.length?R1(mean(roces)):NaN}
+// liquidity: average daily traded value, last 6 months (₹ Cr)
+if(!lag&&vols.length){const n=vols.length,vv=[];for(let i=Math.max(0,n-6);i<n;i++)if(fin(vols[i])&&fin(closes[i]))vv.push(vols[i]*closes[i]/21/1e7);o.adtv_cr=vv.length?Math.round(mean(vv)*100)/100:NaN}
+o.pe=lag?(s('Net Profit',Y(0))>0&&fin(mcap)?R1(mcap/s('Net Profit',Y(0))):NaN):(fin(top['Stock P/E'])?top['Stock P/E']:NaN);
+if(!lag){Object.assign(o,parsePeers(j.peers,mcap));if(o._peers&&!o._peers.length)delete o._peers;
 o._ann=Array.isArray(j.announcements)?j.announcements.slice(0,6):[];o.caps_auto=autoCaps(about).join('; ');
+if(j.rating&&j.rating.grade)Object.assign(o,ratingFields(j.rating,j.rating_prev))}
 for(const [k,t] of COLS)if(!(k in o))o[k]=t==='num'?NaN:'';
-checks.push(`Source: Screener ${j.consolidated?'consolidated':'standalone'} · FY ${Y(0)}${j.cached?' · cached '+String(j.fetched_at||'').slice(0,16).replace('T',' '):''}`);
+checks.push(`Source: Screener ${j.consolidated?'consolidated':'standalone'} · FY ${Y(0)}${lag?' · replay as of '+new Date(ts[asofI]*1000).toISOString().slice(0,7):''}${j.cached?' · cached '+String(j.fetched_at||'').slice(0,16).replace('T',' '):''}`);
 if(!fin(gm(Y(0))))checks.push('Gross margin unavailable (no material-cost breakdown)');
-o._about=about.slice(0,1500);o._prices=ts.map((t,i)=>fin(closes[i])?{date:new Date(t*1000).toISOString().slice(0,10),ticker:sym,close:closes[i]}:null).filter(Boolean);
+if(!lag){o._about=about.slice(0,1500);o._prices=ts.map((t,i)=>fin(closes[i])?{date:new Date(t*1000).toISOString().slice(0,10),ticker:sym,close:closes[i]}:null).filter(Boolean)}
+if(lag){o._asof=new Date(ts[asofI]*1000).toISOString().slice(0,10);o._fy=Y(0);
+ const fwd=m=>{const i=asofI+m;return i<adj.length&&fin(adj[i])&&fin(adj[asofI])&&adj[asofI]>0?adj[i]/adj[asofI]-1:NaN};o._fwd1=fwd(12);o._fwd3=fwd(36);
+ const fy0=yrs.length-1-lag;const fS=k=>sales(yrs[fy0+k]),fE=k=>ebit(yrs[fy0+k]);
+ o._fs3=fy0+3<yrs.length&&sales(Y(0))>0&&fS(3)>0?Math.pow(fS(3)/sales(Y(0)),1/3)-1:NaN;o._fs5=fy0+5<yrs.length&&sales(Y(0))>0&&fS(5)>0?Math.pow(fS(5)/sales(Y(0)),1/5)-1:NaN;
+ o._fe3=fy0+3<yrs.length&&ebit(Y(0))>0&&fE(3)>0?Math.pow(fE(3)/ebit(Y(0)),1/3)-1:NaN}
 return{o,checks}}
+const GRADES={'AAA':10,'AA+':9.5,'AA':9,'AA-':8.5,'A+':8,'A':7.5,'A-':7,'BBB+':6,'BBB':5.5,'BBB-':5,'BB+':4,'BB':3.5,'BB-':3,'B+':2.5,'B':2,'B-':1.5,'C':1,'D':0};
+function ratingFields(r,p){const g=String(r.grade||'').toUpperCase(),pg=p&&String(p.grade||'').toUpperCase();const sc=GRADES[g];const psc=pg?GRADES[pg]:NaN;
+return{rating_grade:(r.agency?r.agency+' ':'')+g+(r.outlook?' / '+r.outlook:''),rating_score:fin(sc)?sc:NaN,rating_chg:fin(sc)&&fin(psc)?sc-psc:NaN,rating_outlook:r.outlook||'',rating_action:r.action||'',rating_date:r.date||'',rating_liq:r.liquidity||'',
+rating_cust:String(r.customers||'').slice(0,400),rating_cust_pct:fin(+r.cust_pct)?+r.cust_pct:NaN,rating_cust_kind:r.cust_kind||'',rating_rpt:String(r.rpt||'').slice(0,400),rating_url:r.u||'',_rating_drivers:String(r.drivers||'').slice(0,2500)}}
+function parseRating(text,u,w){const t=String(text||'').replace(/\s+/g,' ');const head=t.slice(0,6000);
+const G='(AAA|AA\\+|AA-|AA|A\\+|A-|A|BBB\\+|BBB-|BBB|BB\\+|BB-|BB|B\\+|B-|B|C|D)(?![0-9+\\-A-Z])';
+const pats=[new RegExp('\\[ICRA\\]\\s*'+G+'\\s*\\(?\\s*(Stable|Positive|Negative|Developing)?','i'),new RegExp('Crisil\\s+'+G+'\\s*/?\\s*(Stable|Positive|Negative|Developing)?','i'),new RegExp('CARE\\s+'+G+'\\s*[;/]?\\s*(Stable|Positive|Negative|Developing)?','i'),new RegExp('IND\\s+'+G+'\\s*/?\\s*(Stable|Positive|Negative|Developing)?','i')];
+let g=null;for(const re of pats){const m=head.match(re);if(m){g=m;break}}
+const act=(head.toLowerCase().match(/(upgraded|downgraded|reaffirmed|assigned|revised|withdrawn|placed on (?:rating )?watch)/)||[])[1]||'';
+const liq=(t.match(/Liquidity(?: position)?\s*[:\-–]?\s*(Superior|Strong|Adequate|Stretched|Poor)/i)||[])[1]||'';
+const sents=t.split(/(?<=[.;])\s+/);const cs=sents.filter(x=>/customer|client/i.test(x)&&/(top|largest|single|key|major)/i.test(x));const cust=cs.find(x=>/\d\s*%|per ?cent/i.test(x))||cs[0]||'';
+let cust_pct=NaN,cust_kind='';const cm=cust.match(/(top|largest|single)\s*(?:(\w+)\s+)?(?:customers?|clients?)[^%]{0,90}?(\d{1,3}(?:\.\d+)?)\s*(?:%|per ?cent)/i);if(cm){cust_pct=+cm[3];const n=(cm[2]||'').toLowerCase();cust_kind=/^(five|5)$/.test(n)?'top5':/^(ten|10)$/.test(n)?'top10':/single|largest/i.test(cm[1])&&!n?'top1':n?'top'+n:'top1'}
+const rpt=sents.find(x=>/related[- ]part/i.test(x))||'';const ki=t.search(/key rating drivers/i);const drivers=t.slice(ki>0?ki:0,(ki>0?ki:0)+2500);
+let date='';const dm=String(w||'').match(/(\d{1,2}) (\w{3})(?: (\d{4}))?/);if(dm){const mi=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(dm[2].toLowerCase());if(mi>=0){const now=new Date();let y=dm[3]?+dm[3]:now.getUTCFullYear();if(!dm[3]&&Date.UTC(y,mi,+dm[1])>now.getTime())y--;date=`${y}-${String(mi+1).padStart(2,'0')}-${String(dm[1]).padStart(2,'0')}`}}
+return{u,agency:/icra/i.test(u)?'ICRA':/crisil/i.test(u)?'CRISIL':/care/i.test(u)?'CARE':/indiaratings/i.test(u)?'India Ratings':'?',grade:g?g[1].toUpperCase():'',outlook:g&&g[2]?g[2][0].toUpperCase()+g[2].slice(1).toLowerCase():'',action:act,liquidity:liq?liq[0].toUpperCase()+liq.slice(1).toLowerCase():'',customers:cust.slice(0,400),cust_pct,cust_kind,rpt:rpt.slice(0,400),drivers,date}}
 const CAPDICT=[['fluorination',/fluorin|fluoro/i],['nitration',/nitrat/i],['hydrogenation',/hydrogenat/i],['chlorination',/chlorinat|chlor-?alkali/i],['diazotisation',/diazoti/i],['Grignard',/grignard/i],['amination',/aminat/i],['continuous flow',/continuous[- ]flow|flow chemistry/i],['photochemistry',/photochem/i],['electrochemistry',/electrochem/i],['catalysis',/catalys|catalyst/i],['high-pressure reactions',/high[- ]pressure/i],['cryogenic reactions',/cryogenic/i],
 ['polymers',/polymer/i],['dyes & pigments',/\bdyes?\b|pigment/i],['surfactants',/surfactant/i],['agrochemicals',/agro ?chem|crop protection|pesticid|herbicid|fungicid|insecticid/i],['flavours & fragrances',/fragrance|flavou?r/i],['phenolics',/phenolics|cumene/i],['silicones',/silicone/i],['specialty fluorochemicals',/refrigerant|PTFE|fluoropolymer/i],
 ['API',/\bAPIs?\b|active pharmaceutical/i],['CDMO / custom synthesis',/CDMO|CRAMS|contract\s*(\/\s*exclusive\s*)?(development|research|manufactur)|custom synthesis|exclusive (synthesis|manufactur)/i],['formulations',/formulation/i],['peptides',/peptide/i],['oligonucleotides',/oligo/i],['biologics',/biologic|biosimilar|monoclonal|antibod/i],['ADC',/antibody[- ]drug|\bADC\b/i],['vaccines',/vaccine/i],['mRNA',/\bmRNA\b/i],['cell & gene therapy',/cell (and|&) gene|gene therap|cell therap/i],['injectables',/injectable|sterile/i],['HPAPI / oncology',/HPAPI|high[- ]potenc|oncology/i],['medical devices',/medical device/i],['diagnostics',/diagnostic/i],
@@ -144,4 +200,214 @@ if(bad.length)checks.push('⚠ Revenue mismatch with BSE filing (standalone): '+
 return issues}
 function sectorFromIndustry(ind){const t=String(ind||'').toLowerCase();const R=[[/financial services|bank|nbfc|insurance|stockbrok|asset management|housing finance|lending/,'financial'],[/hospital/,'hospital'],[/research|analytics|clinical/,'cro'],[/pharma|drug|biotech/,'pharma'],[/speciali?ty chem|agro ?chem|pesticid|dyes|pigment/,'specialty_chem'],[/commodity chem|petrochem|fertili|carbon black|alkali|chemical/,'commodity_chem'],[/software|it enabled|computers|consulting|it services/,'it_services'],[/aerospace|defen/,'defence'],[/airline|aviation/,'airline'],[/steel|alumin|copper|zinc|metal|mining|ferro/,'metals'],[/auto comp|tyre|auto ancill/,'auto_anc'],[/semiconductor|electronic comp/,'semifab'],[/machinery|electrical equipment|engineering|capital goods|compressor|pump|casting|forging|bearing|industrial products/,'engg'],[/fmcg|packaged food|personal care|household|beverage|tea|coffee|dairy|tobacco|edible oil/,'fmcg']];for(const [re,v] of R)if(re.test(t))return v;return 'other'}
 /*CORE-END*/
-export { screenerHealth, fromScreener, parseExchange, sectorFromIndustry, COLS, SECT };
+/*SCORE-START*/ // engine scoring, shared with the scanner (tools/build_edge.js) — no DOM here
+function dcf(nopat0,g,roce,F){const r=P.r/100,gT=P.gT/100;F=fin(F)?Math.max(0,Math.round(F)):15;let v=0,n=nopat0;for(let t=1;t<=P.N;t++){n*=1+g;const reinv=g>0?Math.min(g/roce,2):0;v+=n*(1-reinv)/Math.pow(1+r,t)}
+for(let t=P.N+1;t<=P.N+F;t++){n*=1+gT;v+=n*(1-Math.min(gT/roce,1))/Math.pow(1+r,t)} // advantage period: earns its ROCE for F more years, set by capabilities and people
+return v+(n/r)/Math.pow(1+r,P.N+F)} // after that ROCE = cost of capital: growth adds nothing
+const SIZEB=[[0,250,'< ₹250 Cr'],[250,1000,'₹250–1,000 Cr'],[1000,5000,'₹1,000–5,000 Cr'],[5000,20000,'₹5,000–20,000 Cr'],[20000,1e12,'> ₹20,000 Cr']];
+const sizeBucket=rev=>{const i=SIZEB.findIndex(b=>rev>=b[0]&&rev<b[1]);return i<0?NaN:i};
+function baseRateFor(s){const T=S.baseRates;if(!P.useBR||!T||!Array.isArray(T.rows)||!fin(s.revenue_cr))return null;const b=sizeBucket(s.revenue_cr);const pick=(sec)=>T.rows.find(x=>x.b===b&&x.sec===sec&&x.n>=(sec?40:30));const x=pick(s.sector_type)||pick('');if(!x)return null;return{mu:x.mu,sd:Math.max(x.sd,0.04),n:x.n,label:SIZEB[b][2]+(x.sec?' · '+x.sec:''),h:x.h}}
+function expectations(s,roceUse,notes,F){const o={capYrs:F,impliedCap:NaN,implied:NaN,gest:NaN,pBeat:NaN,E:NaN,kelly:NaN,flag:'',p10x:NaN,g10x:NaN,bull:NaN};let mu=P.mu/100,sd=P.sd/100;const r=P.r/100;
+const nd=fin(s.net_debt_cr)?s.net_debt_cr:0;const ev=s.mcap_cr+nd;const nopat0=s.revenue_cr*s.ebit_margin/100*(1-P.tax/100);
+if(!fin(ev)||!fin(nopat0)){o.flag='insufficient data';notes.push('Expectations: missing mcap, revenue or EBIT margin');return o}
+if(nopat0<=0){o.flag='loss-making';notes.push('Loss-making: no reverse DCF — a pure option, convex bucket at most');return o}
+const br=baseRateFor(s);if(br){mu=br.mu;sd=br.sd;o.br=br}const w=P.shrink/100;o.gest=fin(s.rev_cagr_5y)?w*s.rev_cagr_5y/100+(1-w)*mu:mu;
+const roce=roceUse;
+// scale test: NOPAT growth needed for 10x equity value in 10 yrs at the exit multiple
+o.g10x=Math.pow(10*s.mcap_cr/(P.exitMult*nopat0),1/10)-1;o.p10x=1-Phi((o.g10x-o.gest)/sd);
+if(roce<=r){const v0=dcf(nopat0,0,roce,0);o.flag='ROCE ≤ cost of capital';if(ev>v0){o.pBeat=0.1;notes.push(`ROCE ${f1(roce*100)}% ≤ cost of equity and no passing-pain evidence: growth destroys value, yet the price exceeds no-growth value`)}else{o.pBeat=0.55;notes.push('ROCE ≤ cost of equity but priced below no-growth value: cheap, value-trap risk')}}
+else{let lo=-0.3,hi=0.6;if(ev>dcf(nopat0,hi,roce,F)){o.implied=hi;o.flag='implied > 60%'}else if(ev<dcf(nopat0,lo,roce,F)){o.implied=lo}else{for(let k=0;k<80;k++){const md=(lo+hi)/2;if(dcf(nopat0,md,roce,F)>ev)hi=md;else lo=md}o.implied=(lo+hi)/2}o.pBeat=1-Phi((o.implied-o.gest)/sd);
+ // price-implied advantage period at base-rate growth
+ if(dcf(nopat0,o.gest,roce,0)>=ev)o.impliedCap=0;else if(dcf(nopat0,o.gest,roce,80)<ev)o.impliedCap=81;else{let a=0,b=80;while(b-a>1){const m=(a+b)>>1;if(dcf(nopat0,o.gest,roce,m)>=ev)b=m;else a=m}o.impliedCap=b}}
+const sc=[[0.25,o.gest-sd],[0.5,o.gest],[0.25,o.gest+sd]].map(([p,g])=>[p,clamp((dcf(nopat0,g,roce,F)-nd)/s.mcap_cr-1,-0.95,5)]);
+o.E=sc.reduce((a,[p,x])=>a+p*x,0);const varr=sc.reduce((a,[p,x])=>a+p*(x-o.E)**2,0);o.kelly=o.E>0&&varr>0?o.E/varr:0;o.sc=sc;o.bull=sc[2][1];return o}
+
+/* ---------- scoring ---------- */
+function capsOf(s){let arr=[];const raw=qt(s,'caps');if(raw){try{const a=JSON.parse(raw);if(Array.isArray(a))arr=a.filter(x=>x&&x.n).map(x=>({n:String(x.n).slice(0,60),s:x.s==='building'?'building':'has',m:String(x.m||'').slice(0,60),st:clamp(+x.st||0,0,5),a:clamp(+x.a||0,0,2),d:/^\d{4}-\d{2}-\d{2}$/.test(x.d||'')?x.d:''}))}catch(e){}}
+const user=!!raw;if(!user)arr=String(s.caps_auto||'').split(';').map(x=>x.trim()).filter(Boolean).map(n=>({n,s:'has',m:'',st:0,a:0,auto:true}));
+const nm=qt(s,'nm_name'),ns=q(s,'nm_stage');if(nm&&ns>0&&!arr.some(c=>c.s==='building'&&c.n.toLowerCase()===nm.toLowerCase()))arr.push({n:nm,s:'building',m:'',st:ns,a:1,d:qt(s,'nm_date')});return arr}
+const ckey=n=>String(n||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+function capUniverse(){const out=[];const seen=new Set();for(const f of S.fund||[]){out.push({t:f.ticker,name:f.name,caps:capsOf(f),f});seen.add(f.ticker)}for(const x of S.scanRaw||[]){if(seen.has(x.s))continue;const r=x.r||{};const c=String(r.caps_auto||'').split(';').map(y=>y.trim()).filter(Boolean).map(n=>({n,s:'has'}));if(c.length)out.push({t:x.s,name:r.name||x.s,caps:c,f:r,scan:true})}return out}
+function capFreq(U){const fq={};U.forEach(u=>{new Set(u.caps.filter(c=>c.s==='has').map(c=>ckey(c.n))).forEach(k=>fq[k]=(fq[k]||0)+1)});return{fq,n:U.length}}
+function qt(s,k){const o=S.over[s.ticker];if(o&&k in o)return String(o[k]||'');return String(s[k]||'')}
+function q(s,k){const o=S.over[s.ticker];if(o&&k in o)return o[k];const v=s[k];return fin(v)?v:0}
+function score(s){const miss=[],notes=[],gates=[];const r={t:s.ticker,name:s.name,st:s.sector_type,s,notes,miss,gates};
+const sec=SECT[s.sector_type]||SECT.other;const tol=sec[0]??P.ndEdef,plMax=sec[1]??P.pledgeDef,sci=!!sec[2],depG=!!sec[3],cyc=!!sec[4];r.tol=tol;r.plMax=plMax;
+const nd=fin(s.net_debt_cr)?s.net_debt_cr:NaN;const ndE=fin(nd)&&fin(s.ebitda_cr)?(s.ebitda_cr>0?nd/s.ebitda_cr:(nd>0?99:-1)):NaN;
+const ebit=s.revenue_cr*s.ebit_margin/100;const cov=fin(ebit)&&fin(s.interest_cr)?(s.interest_cr>0?ebit/s.interest_cr:99):NaN;
+const cashY=fin(nd)&&s.mcap_cr>0?-nd/s.mcap_cr:NaN;const ps=s.mcap_cr/s.revenue_cr;const evE=fin(s.ebitda_cr)&&s.ebitda_cr>0?(s.mcap_cr+(fin(nd)?nd:0))/s.ebitda_cr:NaN;
+const mDep=fin(s.depreciation_cr)&&s.depreciation_cr>0?s.mcap_cr/s.depreciation_cr:NaN;const conv=fin(s.cfo_3y_cr)&&fin(s.pat_3y_cr)&&s.pat_3y_cr>0?s.cfo_3y_cr/s.pat_3y_cr:NaN;
+Object.assign(r,{ndE,cov,ps,evE,mDep,conv,cashY});
+/* via negativa */
+if(s.sector_type==='financial')gates.push('Financial company (bank, NBFC, broker, insurer): not modelled by this engine');
+if(fin(ndE)&&ndE>tol)gates.push(`Company debt: net debt/EBITDA ${f1(ndE)} > ${tol} (sector trough tolerance)`);
+if(fin(cov)&&cov<P.cov)gates.push(`Interest cover ${f1(cov)}× < ${P.cov}×`);
+if(fin(s.pledge_pct)&&s.pledge_pct>plMax)gates.push(`Owner debt: pledge ${f1(s.pledge_pct)}% > ${plMax}% (sector pledge sensitivity)`);
+if(fin(s.cfo_neg_years)&&s.cfo_neg_years>=P.cfoNeg)gates.push(`Negative CFO in ${s.cfo_neg_years} of 5 yrs`);
+if(fin(s.dilution_3y)&&s.dilution_3y>P.dil)gates.push(`3-yr dilution ${f1(s.dilution_3y)}% > ${P.dil}%`);
+if(s.auditor_flag===1)gates.push('Auditor flag');
+if(depG&&fin(ps)&&ps>P.psMax&&fin(mDep)&&mDep>P.depMax)gates.push(`P/S ${f1(ps)} > ${P.psMax} AND mcap ÷ depreciation ${Math.round(mDep)}× > ${P.depMax}×`);
+else if(sci&&fin(ps)&&ps>P.psMax)notes.push(`P/S ${f1(ps)} is above ${P.psMax}: one leg of his science/tech cut-off. The removal rule needs it together with mcap ÷ depreciation above ${P.depMax}× (CDMO/defence/aero); here that's ${fin(mDep)?Math.round(mDep)+'×':'unknown'}.`);
+if(sci&&fin(s.cfo_cr)&&s.cfo_cr<0&&fin(mDep)&&mDep>P.depNegMax)gates.push(`Negative CFO with mcap ÷ depreciation ${Math.round(mDep)}× > ${P.depNegMax}×`);
+/* capital-lag stage */
+const roceN=s.roce,roce3=s.roce_3y;let stage='–',passingPain=false;
+if(fin(roceN)){const gm=s.gross_margin;
+if(roceN<P.r+P.ppRoceGap&&fin(s.cwip_pct)&&s.cwip_pct>=P.ppCwip&&fin(gm)&&gm>=P.ppGM&&!(fin(ndE)&&ndE>tol)){stage='Early investment (passing pain)';passingPain=true}
+else if(fin(roce3)&&roceN-roce3>=3&&roceN<25)stage='Gates / ramp-up';
+else if(cyc&&roceN>=P.peakRoce)stage='Cyclical peak';
+else if(roceN>=18&&(!fin(roce3)||roceN-roce3>-3))stage='Harvest';
+else if(fin(s.roce_min_5y)&&roceN-s.roce_min_5y>=8&&roceN>=P.r)stage='Recovering from trough';
+else if(fin(roce3)&&roceN-roce3<=-3)stage='Fading';
+else stage='Mature / steady'}
+r.stage=stage;r.passingPain=passingPain;if(stage==='Cyclical peak')notes.push(`ROCE ${f1(roceN)}% in a cyclical sector: more likely a peak to sell into than a base to buy on`);
+/* resilience R */
+const capPen=fin(s.cap_rnd_pct)?clamp((s.cap_rnd_pct-P.capRnd*0.5)/(P.capRnd*0.5),0,1)*2:0;if(fin(s.cap_rnd_pct)&&s.cap_rnd_pct>P.capRnd)notes.push(`Capitalised R&D ${f1(s.cap_rnd_pct)}% of net worth: a forecast miss forces write-downs (concave payoff)`);
+/* customer spread (Greene/Taleb: one customer = one point of failure) */
+const band=(()=>{const o=S.over[s.ticker];const v=o&&'cust_band' in o?o.cust_band:s.cust_band;return fin(v)&&v>=0?v:NaN})();
+const cParts=[];let top1=s.top_customer_pct,top5=s.top5_customer_pct;r.custFromRating=false;if(!fin(top1)&&!fin(top5)&&fin(s.rating_cust_pct)){r.custFromRating=true;if(s.rating_cust_kind==='top1')top1=s.rating_cust_pct;else if(s.rating_cust_kind==='top5')top5=s.rating_cust_pct;else if(s.rating_cust_kind==='top10')cParts.push(clamp((90-s.rating_cust_pct)/50,0,1))}
+if(fin(top1))cParts.push(clamp((50-top1)/40,0,1));if(fin(top5))cParts.push(clamp((85-top5)/55,0,1));if(fin(band))cParts.push([0,0.3,0.7,1][band]);
+const custS=cParts.length?Math.min(...cParts):NaN;if(!cParts.length)miss.push('customer concentration');r.custS=custS;r.band=band;
+const single=(fin(top1)&&top1>=50)||band===0;r.single=single;
+r.R=clamp(((fin(ndE)?clamp((tol-ndE)/Math.max(tol,0.5),0,1)*3:(miss.push('leverage'),1.5))+lin(cov,2,10,2,miss,'interest cover')+lin(conv,0.4,1.0,2,miss,'cash conversion')+(fin(s.gross_margin_sd)?clamp((10-s.gross_margin_sd)/8,0,1)*1:(miss.push('margin stability'),.5))+lin(cashY,0,0.1,0.5,miss,'net cash'))*(7/8.5)+(fin(custS)?custS*3:1.5)-capPen,0,10);
+if(fin(s.rating_score))r.R=clamp(r.R+clamp((s.rating_score-7.5)/5,-0.5,0.5),0,10);if(/stretched|poor/i.test(s.rating_liq||'')){r.R=clamp(r.R-0.5,0,10);notes.push(`Rating agency calls liquidity "${s.rating_liq}"`)}
+if(single){r.R=Math.min(r.R,5);notes.push(`Single-customer dependence${fin(top1)?` (largest customer ${f1(top1)}% of revenue${r.custFromRating?', per the rating report':''})`:''}: one contract decides the outcome — resilience capped at 5, CONVEX at most, never CORE`)}
+/* hurdle (quarterly) */
+let hurdle='n/a';if(fin(s.rev_q)&&(fin(s.rev_pq)||fin(s.rev_ly))){const hr=Math.max(fin(s.rev_pq)?s.rev_pq:-1,fin(s.rev_ly)?s.rev_ly:-1);const okR=s.rev_q>=hr;let okM=true,hm=NaN;if(fin(s.ebitdam_q)&&(fin(s.ebitdam_pq)||fin(s.ebitdam_ly))){hm=Math.max(fin(s.ebitdam_pq)?s.ebitdam_pq:-99,fin(s.ebitdam_ly)?s.ebitdam_ly:-99);okM=s.ebitdam_q>=hm}
+const strict=fin(ps)&&ps>=8;hurdle=(okR&&okM)?'PASS':(!strict&&(okR||okM))?'PASS (1 miss tolerated)':'MISS';r.hurdleTxt=`Revenue ${s.rev_q} vs bar ${hr} ${okR?'✓':'✗'}`+(fin(hm)?` · EBITDA margin ${f1(s.ebitdam_q)}% vs bar ${f1(hm)}% ${okM?'✓':'✗'}`:'')+(strict?' · rich valuation: both must clear':'')}
+r.hurdle=hurdle;
+/* trajectory T */
+const dRoce=fin(roceN)&&fin(roce3)?roceN-roce3:NaN,dGM=fin(s.gross_margin)&&fin(s.gross_margin_3y)?s.gross_margin-s.gross_margin_3y:NaN,dEM=fin(s.ebit_margin)&&fin(s.ebit_margin_3y)?s.ebit_margin-s.ebit_margin_3y:NaN,dRD=fin(s.recv_days)&&fin(s.recv_days_3y)?s.recv_days-s.recv_days_3y:NaN;
+r.T=lin(dRoce,-10,10,3.5,miss,'ROCE 3y ago')+lin(dGM,-8,8,2.5,miss,'gross margin 3y ago')+lin(dEM,-8,8,2,miss,'EBIT margin 3y ago')+(fin(dRD)?clamp((30-dRD)/60,0,1)*1:(miss.push('receivable days 3y ago'),.5))+(hurdle==='n/a'?.5:hurdle==='MISS'?0:1);
+Object.assign(r,{dRoce,dGM,dEM,dRD});
+/* rate of change (second derivative) */
+const accel=fin(s.g_q0)&&fin(s.g_q1)&&fin(s.g_q2)&&fin(s.g_q3)?(s.g_q0+s.g_q1)/2-(s.g_q2+s.g_q3)/2:fin(s.g_q0)&&fin(s.g_q2)?s.g_q0-s.g_q2:NaN;
+const opmD=fin(s.ebitdam_q)&&fin(s.ebitdam_ly)?s.ebitdam_q-s.ebitdam_ly:NaN;
+let roc='n/a';if(fin(accel)){roc=fin(s.g_q0)&&s.g_q0>0&&fin(s.g_q2)&&s.g_q2<0?'Inflecting up':fin(s.g_q0)&&s.g_q0<0&&fin(s.g_q2)&&s.g_q2>0?'Rolling over':accel>=P.accelPP&&!(fin(opmD)&&opmD<-1)?'Accelerating':accel<=-P.accelPP?'Decelerating':'Steady'}
+const rocScore=fin(accel)?clamp(5+accel/4+(fin(opmD)?opmD/2:0),0,10):NaN;Object.assign(r,{accel,opmD,roc,rocScore});
+/* operating leverage */
+const headroom=fin(s.asset_turn)&&s.asset_turn>0&&fin(s.asset_turn_peak)?s.asset_turn_peak/s.asset_turn:NaN;const incrGap=fin(s.incr_margin_3y)&&fin(s.opm_3y)?s.incr_margin_3y-s.opm_3y:NaN;
+const hiFix=fin(s.fixed_cost_pct)&&s.fixed_cost_pct>=P.fixedHi;const spare=(fin(headroom)&&headroom>=P.headroom)||(fin(s.cwip_pct)&&s.cwip_pct>=P.ppCwip);
+let opl='n/a',oplScore=NaN;
+if(hiFix&&fin(s.g_q0)&&s.g_q0<=-5){opl='Working in reverse';oplScore=1.5;notes.push(`Operating leverage in reverse: semi-fixed costs ${f1(s.fixed_cost_pct)}% of sales while sales fall ${f1(s.g_q0)}% YoY — losses widen faster than sales fall (concave)`)}
+else if(fin(incrGap)&&incrGap>=3&&fin(s.g_q0)&&s.g_q0>0){opl='Working';oplScore=clamp(6+incrGap/5,0,10)}
+else if(hiFix&&spare&&(!fin(s.g_q0)||s.g_q0>0)){opl='Ahead (spare capacity)';oplScore=6.5;notes.push(`Operating leverage ahead: semi-fixed costs ${f1(s.fixed_cost_pct)}% of sales with ${fin(headroom)&&headroom>=P.headroom?`asset turn ${f2(s.asset_turn)} vs best ${f2(s.asset_turn_peak)} (${f1(headroom)}× headroom)`:`CWIP ${f1(s.cwip_pct)}% of net block`} — margins should expand if utilisation rises. Watch the quarterly OPM, not the story.`)}
+else if(fin(incrGap)&&incrGap<=-3){opl='Not showing (incremental margin below base)';oplScore=clamp(4+incrGap/5,0,10)}
+else if(fin(s.fixed_cost_pct)||fin(incrGap))(opl='Neutral',oplScore=5);
+Object.assign(r,{headroom,incrGap,opl,oplScore});
+if(hiFix&&cyc)r.R=clamp(r.R-0.5,0,10);
+{const dyn=[rocScore,oplScore].filter(fin);if(dyn.length)r.T=0.8*r.T+0.2*mean(dyn)}
+/* peers (same industry, Screener) */
+const peRel=fin(s.pe)&&s.pe>0&&fin(s.peer_pe_med)&&s.peer_pe_med>0?s.pe/s.peer_pe_med:NaN;const roceGap=fin(s.roce)&&fin(s.peer_roce_med)?s.roce-s.peer_roce_med:NaN;const sgGap=fin(s.own_sg_q)&&fin(s.peer_sg_med)?s.own_sg_q-s.peer_sg_med:NaN;
+Object.assign(r,{peRel,roceGap,sgGap});
+if(fin(peRel)&&peRel>=1.5&&fin(roceGap)&&roceGap<0)notes.push(`Peer check: P/E ${f1(s.pe)} is ${f1(peRel)}× the industry median (${f1(s.peer_pe_med)}, ${s.peer_n||'?'} companies) while ROCE ${f1(s.roce)}% is below the median ${f1(s.peer_roce_med)}% — the premium is paying for a future, not today's returns`);
+if(fin(peRel)&&peRel<=0.8&&fin(roceGap)&&roceGap>=3)notes.push(`Peer check: cheaper than the industry (P/E ${f2(peRel)}× median) with ROCE ${f1(roceGap)} pp above median`);
+/* new market entry: evidence ladder */
+const nmSt=clamp(Math.round(q(s,'nm_stage')),0,5),nmName=qt(s,'nm_name'),nmDate=qt(s,'nm_date');r.nmSt=nmSt;r.nmName=nmName;
+
+if(nmSt>=1&&nmSt<=2&&(q(s,'c_theme')||q(s,'f_narrative')))notes.push(`New market "${nmName||'?'}" is at stage ${nmSt} on a hot theme: an announcement is close to worthless as evidence (counts ${p0([0,0.1,0.3,0.5,0.8,1][nmSt])} of a proven line)`);
+if(nmSt>=3&&!(fin(s.cwip_pct)&&s.cwip_pct>=5)&&!(fin(s.cap_growth_3y)&&s.cap_growth_3y>=20))notes.push(`New market at stage ${nmSt}, but the balance sheet shows little new capacity (CWIP ${f1(s.cwip_pct)}%, net block + CWIP ${fin(s.cap_growth_3y)?s.cap_growth_3y+'%':'?'} in 3 yrs): check where it is being made`);
+/* moat & optionality O */
+const thiel=(q(s,'q_tech')+q(s,'q_network')+q(s,'q_scale')+q(s,'q_brand'))/8;
+r.O=lin(s.gross_margin,20,70,2.5,miss,'gross margin')+(passingPain?1.4:lin(s.roce_min_5y,10,30,2,miss,'min ROCE'))+lin(s.rnd_pct,0,8,1,miss,'R&D')+thiel*1.5+q(s,'q_diversity')/2*1.5+q(s,'q_portable')/2*1.5;if(fin(roceGap)&&!passingPain)r.O=clamp(r.O+clamp(roceGap/10,-1,1),0,10);
+/* management M */
+const pp=s.promoter_pct;const skin=(fin(pp)?(pp>=40&&pp<=75?4:pp<40?clamp(pp/40,0,1)*4:clamp((90-pp)/15,0,1)*4):(miss.push('promoter %'),2))+lin(s.promoter_chg_3y,-5,2,3,miss,'promoter change')+(fin(s.pledge_pct)?clamp((10-s.pledge_pct)/10,0,1)*3:(miss.push('pledge'),1.5));
+const flags=[['f_opaque','opaque disclosure'],['f_keyman','key-man dependence'],['f_minority','minority-hostile structure'],['f_hype','promotion-led'],['f_narrative','narrative ahead of numbers']].filter(([k])=>q(s,k)>=1).map(x=>x[1]);r.flags=flags;
+const gh=fin(s.guidance_hit)?s.guidance_hit:(S.promiseHit&&S.promiseHit[s.ticker]&&S.promiseHit[s.ticker].n>=2?S.promiseHit[s.ticker].hit:NaN);r.gh=gh;
+const payPen=fin(s.mgmt_pay_pct)?(s.mgmt_pay_pct>10?3:s.mgmt_pay_pct>5?1.5:0):0;if(payPen)notes.push(`Promoter/KMP pay ${f1(s.mgmt_pay_pct)}% of net profit: owners paying themselves before shareholders`);
+const down=/downgrad/i.test(s.rating_action||'')||(fin(s.rating_chg)&&s.rating_chg<0);if(down)notes.push(`Credit rating downgraded (${s.rating_grade||''}${s.rating_date?', '+s.rating_date:''})`);if(/negative/i.test(s.rating_outlook||''))notes.push('Rating outlook negative');
+r.gov=clamp(10-(fin(s.rpt_pct)?clamp((s.rpt_pct-1)/9,0,1)*3:(miss.push('RPT'),1.5))-(fin(gh)?clamp((0.8-gh)/0.6,0,1)*3:(miss.push('guidance record'),1.5))-flags.length*2-payPen-(down?1:0),0,10);
+if(flags.length>=P.govFlags)gates.push(`${flags.length} red flags (${flags.join(', ')})`);if(r.gov<P.govMin)gates.push(`Governance ${f1(r.gov)} < ${P.govMin}`);
+const aParts=[];if(fin(s.incr_roce_5y))aParts.push(clamp(5+(s.incr_roce_5y-P.r)/3,0,10));if(fin(s.capex_payoff))aParts.push(clamp(s.capex_payoff*6,0,10));if(fin(s.dilution_3y)&&s.dilution_3y>10)aParts.push(fin(s.incr_roce_5y)&&s.incr_roce_5y>=P.r?6:2);
+r.alloc=aParts.length?mean(aParts):NaN;if(!aParts.length)miss.push('capital-allocation record');
+if(fin(s.incr_roce_5y)&&s.incr_roce_5y<P.r&&!passingPain)notes.push(`Capital allocation: capital added over ${s.alloc_yrs||5} yrs earned ${f1(s.incr_roce_5y)}% (cost of equity ${P.r}%) — growth so far has not created value`);
+if(fin(s.capex_payoff)&&s.capex_payoff<0.6)notes.push(`Capex payoff ${f2(s.capex_payoff)}: new capacity sells ${p0(s.capex_payoff)} as much per rupee as the old did${passingPain?' (may still be ramping)':''}`);
+r.M=clamp(0.35*skin+0.35*r.gov+0.30*(fin(r.alloc)?r.alloc:5)-q(s,'f_blame')*1.5-q(s,'f_succession')*1,0,10);if(q(s,'f_blame'))notes.push('Management blames outside factors: listen for what they blame');
+/* capabilities: what it can do, and what it is getting into */
+const caps=capsOf(s);r.caps=caps;const U=S._capU||[];const F0=S._capF||{fq:{},n:0};const rar=k=>F0.n>=30?1-0.7*Math.min((F0.fq[k]||0)/F0.n/0.15,1):0.7;
+const has=caps.filter(c=>c.s==='has'),bld=caps.filter(c=>c.s==='building');const NMW=[0,0.1,0.3,0.5,0.8,1],ADJ=[0.4,0.8,1];
+r.capDepth=has.length?clamp(has.reduce((a,c)=>a+rar(ckey(c.n)),0)/3,0,1)*10:NaN;
+r.capBuild=bld.length?clamp(bld.reduce((a,c)=>a+NMW[c.st]*ADJ[c.a],0)/1.5,0,1)*10:0;
+const isSet=k=>{const o=S.over[s.ticker];return (o&&k in o)||fin(s[k])};const kp=[];if(fin(r.capDepth))kp.push(r.capDepth);if(bld.length)kp.push(r.capBuild);for(const k of ['q_tech','q_portable','q_diversity'])if(isSet(k))kp.push(q(s,k)/2*10);if(kp.length<2)miss.push('capability judgement');const capK=kp.length?mean(kp):5;r.capK=capK;
+r.peopleCapK=0.5*capK+0.5*r.M;const capYrs=Math.round(P.capMax*r.peopleCapK/10);r.capYrs=capYrs;
+if(fin(r.capDepth))r.O=clamp(0.8*r.O+0.2*r.capDepth,0,10);
+bld.forEach(c=>{if(c.a===0&&c.st<=2)notes.push(`Getting into "${c.n}" is a new, unrelated field at stage ${c.st}: far moves fail more often than adjacent ones — counted at 40% weight`)});
+/* capability peers */
+const mine=new Set(caps.map(c=>ckey(c.n)));r.capPeers=[];r.entry=[];
+if(mine.size&&U.length){r.capPeers=U.filter(u=>u.t!==s.ticker).map(u=>{const th=new Set(u.caps.map(c=>ckey(c.n)));const sh=caps.filter(c=>th.has(ckey(c.n))).map(c=>c.n).filter((v,i,a)=>a.indexOf(v)===i);return{u,sh,j:[...mine].filter(k=>th.has(k)).length/(new Set([...mine,...th]).size)}}).filter(x=>x.sh.length).sort((a,b)=>b.j-a.j||(b.u.f.mcap_cr||0)-(a.u.f.mcap_cr||0)).slice(0,8);
+r.entry=bld.map(c=>{const k=ckey(c.n);const inc=U.filter(u=>u.t!==s.ticker&&u.caps.some(x=>x.s==='has'&&ckey(x.n)===k)).sort((a,b)=>(b.f.mcap_cr||0)-(a.f.mcap_cr||0));const ent=U.filter(u=>u.t!==s.ticker&&u.caps.some(x=>x.s==='building'&&ckey(x.n)===k));return{c,inc,ent}})}
+/* expectations */
+const roceUse=passingPain?Math.max(P.r+6,fin(s.roce_min_5y)?s.roce_min_5y:0,fin(roce3)?roce3:0)/100:(fin(roceN)?roceN/100:(miss.push('ROCE'),P.r/100+0.03));
+if(passingPain)notes.push(`Passing pain: valued on a normalised ROCE of ${f1(roceUse*100)}% (assumption — edit thresholds in Settings), not today's ${f1(roceN)}%`);
+r.exp=expectations(s,roceUse,notes,capYrs);const e=r.exp;
+if(fin(e.impliedCap)&&e.impliedCap>=capYrs+5&&e.impliedCap>=capYrs*1.5)notes.push(`At base-rate growth the price needs excess returns for ${e.impliedCap>80?'80+':e.impliedCap} years beyond the forecast; capabilities and people justify about ${capYrs}`);
+/* valuation richness V */
+const vParts=[];if(fin(ps)&&ps>0)vParts.push(clamp(Math.log(ps)/Math.log(15),0,1)*10);if(fin(evE))vParts.push(clamp(Math.log(evE/8)/Math.log(60/8),0,1)*10);if(fin(e.implied))vParts.push(clamp(((e.implied-e.gest)/(P.sd/100)+2)/4,0,1)*10);else if(e.flag==='ROCE ≤ cost of capital')vParts.push(e.pBeat<0.3?7:3);if(fin(e.impliedCap))vParts.push(clamp(5+(Math.min(e.impliedCap,80)-capYrs)/3,0,10));
+r.V=vParts.length?mean(vParts):5;if(fin(peRel)){const w=clamp(P.peerW/100,0,1);r.V=(1-w)*r.V+w*clamp(5+3.3*Math.log2(peRel),0,10)}
+/* system S */
+r.S=0.30*r.R+0.30*r.T+0.25*r.O+0.15*r.M;
+r.nmos=Math.min(r.R,r.M,10-r.V);
+/* past position for arrows */
+if(fin(s.ps_3y)&&s.ps_3y>0){const psPast=clamp(Math.log(s.ps_3y)/Math.log(15),0,1)*10;const psNow=fin(ps)&&ps>0?clamp(Math.log(ps)/Math.log(15),0,1)*10:r.V;r.Vpast=clamp(r.V+(psPast-psNow),0,10);r.Spast=clamp(r.S-(r.T-5)*0.6,0,10);r.rerate=ps/s.ps_3y}
+/* progress vs option */
+r.prog=mean([r.T,fin(conv)?clamp(conv/1.0,0,1)*10:5,hurdle==='n/a'?5:hurdle==='MISS'?0:10]);
+const smallness=fin(s.mcap_cr)?clamp((Math.log10(20000)-Math.log10(Math.max(100,s.mcap_cr)))/(Math.log10(20000)-2.7),0,1)*10:5;
+r.opt=mean([q(s,'q_optionality')/3*10,smallness,fin(e.bull)?clamp(e.bull/2,0,1)*10:5,q(s,'q_portable')/2*10])+q(s,'q_antifragile')*0.5+q(s,'q_secret')*0.5+r.capBuild/5;r.opt=clamp(r.opt,0,10);
+r.quad=r.prog>=5?(r.opt>=5?'Evidence + upside':'Proven, priced'):(r.opt>=5?'Possibility, not proof':'Too early');
+/* divergence */
+let div='–';if(fin(r.rerate)){if(r.T>=6&&r.rerate<=0.8)div='POSITIVE';else if(r.T<4&&r.rerate<=0.9)div='TRAP';else if(r.T>=5&&r.rerate>=1.5)div='PRICED IN';else if(r.T<5&&r.rerate>=1.3)div='NEGATIVE';else div='neutral'}
+if(r.V>=P.negDivV&&r.R<P.negDivR){div='NEGATIVE';gates.push(`Negative divergence: rich valuation (${f1(r.V)}) on a fragile system (resilience ${f1(r.R)})`)}
+r.div=div;
+/* crowding: six dots */
+const dots=[['Valuation re-rated',fin(r.rerate)&&r.rerate>=P.rerate],['Expectations priced in',fin(e.implied)&&e.implied>=e.gest+P.sd/100],['Hot narrative',q(s,'c_theme')>=1||q(s,'f_narrative')>=1||q(s,'f_hype')>=1],['Sell-side bullish',q(s,'c_sellside')>=1],['Institutions out, retail in',fin(s.dii_chg_1y)&&fin(s.retail_chg_1y)&&s.dii_chg_1y<0&&s.retail_chg_1y>10],['Sequential exam failed',hurdle==='MISS']];
+r.dots=dots;r.crowd=dots.filter(d=>d[1]).length;
+/* quant */
+r.quant=S.lab&&S.lab.ok&&S.lab.anyAccepted&&S.lab.comp[s.ticker]?S.lab.comp[s.ticker].pct:NaN;
+/* kill switch */
+const held=s.held===1;r.held=held;const fromCost=held&&fin(s.avg_cost)&&s.avg_cost>0&&fin(s.price)?s.price/s.avg_cost-1:NaN;r.fromCost=fromCost;
+const dd=fin(s.price)&&fin(s.peak_price)&&s.peak_price>0?1-s.price/s.peak_price:NaN;r.dd=dd;
+const ks=[];if(held){if(fin(fromCost)&&fromCost<=-P.invest/100)ks.push(P.regret==='overpay'&&fromCost<=-P.stop/100?['PRICE','Stop hit (overpay profile): exit']:['PRICE','Fallen '+p0(-fromCost)+' from cost: investigate — a signal, not a verdict']);
+if(s.milestone_date&&!q(s,'milestone_met')&&s.milestone_date<new Date().toISOString().slice(0,10))ks.push(['TIME',`Milestone "${s.milestone}" due ${s.milestone_date} not met: reassess`]);
+if(q(s,'thesis_broken'))ks.push(['THESIS','Original reason no longer holds: exit'])}
+{const today=new Date().toISOString().slice(0,10);(r.caps||[]).filter(c=>c.s==='building'&&c.d&&c.st<4&&c.d<today).forEach(c=>{const m=`Getting into "${c.n}" was due to earn revenue by ${c.d} and is still at stage ${c.st}: reassess`;if(held)ks.push(['TIME',m]);else notes.push(m)})}
+r.ks=ks;
+/* bucket */
+const nmosMin=P.regret==='overpay'?P.nmosOverpay:P.nmosOwn;
+if(gates.length)r.bucket='AVOID';
+else if(held&&ks.some(k=>k[0]==='THESIS'||/Stop hit/.test(k[1])))r.bucket='EXIT';
+else if(r.crowd>=P.crowdTrim)r.bucket='TRIM';
+else if(!r.single&&r.S>=P.coreS&&r.nmos>=nmosMin&&((fin(e.E)&&e.E>0)||(div==='POSITIVE'&&r.V<=4))&&div!=='TRAP'&&div!=='NEGATIVE'&&!(P.regret==='overpay'&&r.V>P.overpayV)&&r.stage!=='Cyclical peak')r.bucket='CORE';
+else if(r.opt>=P.convO&&r.R>=P.convR&&(!fin(s.mcap_cr)||s.mcap_cr<=P.convMcap)&&r.stage!=='Cyclical peak')r.bucket='CONVEX';
+else r.bucket='WATCH';
+/* why-not and entry plan */
+const why=[];if(r.bucket==='WATCH'){if(r.S<P.coreS)why.push(`system ${f1(r.S)} < ${P.coreS}`);if(r.nmos<nmosMin)why.push(`net MoS ${f1(r.nmos)} < ${nmosMin}`);if(r.S>=P.coreS&&fin(e.E)&&e.E<=0&&div!=='POSITIVE')why.push('quality fully priced');if(div==='TRAP')why.push('cheap and getting worse');if(P.regret==='overpay'&&r.V>P.overpayV)why.push('valuation not undemanding enough for your regret profile');if(r.stage==='Cyclical peak')why.push('cyclical peak');if(r.single)why.push('single-customer dependence');if(r.opt<P.convO&&r.bucket==='WATCH'&&r.S<P.coreS)why.push(r.quad)}
+r.why=why;
+let plan='';if(r.bucket==='CORE'||r.bucket==='CONVEX'){if(P.regret==='own')plan=(fin(dd)&&dd>=P.ddEntry/100&&r.R>=6?`Down ${p0(dd)} from peak with the system intact: start accumulating. `:'')+'Stage it: 20% now · 20–30% on the next evidence point · final 50% just in time.';else plan=`Buy the planned size only at an undemanding price; hard stop ${P.stop}% below cost.`}
+if(r.crowd>=P.crowdCaution&&r.bucket!=='TRIM'&&r.bucket!=='AVOID')plan+=(plan?' ':'')+`${r.crowd} crowding signs: don't add.`;
+if(held&&fin(e.p10x)&&e.p10x*100<P.p10xSwitch&&r.bucket!=='EXIT')plan+=(plan?' ':'')+`Scale test weak (P(10× in 10 yrs) ${p0(e.p10x)}): look for a switch with more remaining asymmetry.`;
+r.plan=plan;
+r.rank=({CORE:0.45*r.S+0.35*r.nmos+0.2*(fin(r.quant)?r.quant/10:5),CONVEX:0.6*r.opt+0.25*r.R+0.15*(fin(r.quant)?r.quant/10:5),WATCH:0.5*r.S+0.5*r.opt,TRIM:r.crowd,EXIT:10,AVOID:-1})[r.bucket];
+return r}
+/*SCORE-END*/
+// History replay: score each past financial year as of 4 months after it closed (annual results public),
+// using only data available then, and attach what happened next (returns, sales and EBIT growth).
+const rd = (x, k = 3) => (fin(x) ? Math.round(x * 10 ** k) / 10 ** k : null);
+function panelRows(j, sym, st) {
+  const out = [];
+  for (let k = 1; k <= 9; k++) {
+    let o;
+    try { o = fromScreener(j, sym, st, k).o; } catch (e) { if (/not enough history/.test(String(e && e.message))) break; continue; }
+    if (!fin(o.mcap_cr) || !fin(o.revenue_cr) || o.revenue_cr <= 0) continue;
+    o.sector_type = st;
+    let r; try { r = score(o); } catch (e) { continue; }
+    const e = r.exp || {};
+    out.push({ fy: o._fy, asof: o._asof, sec: st, rev: Math.round(o.revenue_cr), mcap: Math.round(o.mcap_cr),
+      S: rd(r.S, 2), R: rd(r.R, 2), T: rd(r.T, 2), O: rd(r.O, 2), M: rd(r.M, 2), V: rd(r.V, 2), nmos: rd(r.nmos, 2), opt: rd(r.opt, 2),
+      b: r.bucket, stage: r.stage, div: r.div, gates: r.gates.length, crowd: r.crowd,
+      f: { roce: rd(o.roce, 1), dRoce: rd(r.dRoce, 1), ps: rd(r.ps, 2), evE: rd(r.evE, 1), conv: rd(r.conv, 2), ndE: rd(r.ndE, 2), dGM: rd(r.dGM, 1), dEM: rd(r.dEM, 1),
+        iroce: rd(o.incr_roce_5y, 1), payoff: rd(o.capex_payoff, 2), capGap: fin(e.impliedCap) && fin(r.capYrs) ? Math.min(e.impliedCap, 80) - r.capYrs : null,
+        implied: rd(e.implied), gest: rd(e.gest), pBeat: rd(e.pBeat), alloc: rd(r.alloc, 2), rg5: rd(o.rev_cagr_5y, 1) },
+      fwd1: rd(o._fwd1), fwd3: rd(o._fwd3), fs3: rd(o._fs3), fs5: rd(o._fs5), fe3: rd(o._fe3) });
+  }
+  return out;
+}
+export { screenerHealth, fromScreener, parseExchange, sectorFromIndustry, parseRating, panelRows, COLS, SECT };

@@ -188,3 +188,18 @@ grant all on afqe.universe, afqe.raw, afqe.rows, afqe.rows_hist to service_role;
 --   afqe-parse      5-55/10 * * * *  net.http_post(<project>/functions/v1/afqe-parse, header x-afqe-token)
 --   afqe-universe   20 1 * * 0    select public.afqe_load_universe();
 --   afqe-cache-trim 40 * * * *    update afqe.cache set body = null, status = 0 where fetched_at < now() - interval '13 hours' and body is not null;
+
+-- ===================== People, history replay, journal sync, alerts (Nov 2026) =====================
+-- afqe.ratings  : latest/previous parsed credit-rating report per symbol (links from Screener's documents section).
+-- afqe.panel    : history replay — each past FY scored as of 4 months after it closed, with forward returns/growth.
+-- afqe.state    : your list, judgement overrides, journal and promises (one row, id 'me'), synced from the page.
+-- afqe.alerts   : daily alerts (unique key per event), optionally pushed to ntfy.sh.
+-- public.afqe_call(kind,arg,body)      : dispatcher (screener|exchange|scan|panel|state_get|state_put|alerts|alerts_seen|baserates)
+-- public.afqe_api2(token,kind,sym,body): token-checked wrapper used by the afqe edge function (GET or POST).
+-- public.afqe_rating_queue/_store      : work queue for the afqe-rating edge function (PDF/HTML rating rationales).
+-- public.afqe_parse_store              : also upserts the replay panel produced by core.panelRows.
+-- public.afqe_baserates()              : forward 3–5-yr sales CAGR by starting size bucket (and sector), from the panel.
+-- public.afqe_alerts_run()             : daily checks (hurdle, cost, entry zone, milestones, revenue-due dates, rating, reviews, promises).
+-- public.afqe_list_refresh()           : moves your list to the front of the scan queue each morning.
+-- Schedules: afqe-rating 7-57/10 * * * * · afqe-scan */10 (8 per run) · afqe-list-refresh 1 1 * * * · afqe-alerts 41 3 * * * (09:11 IST)
+-- Full definitions: see the live project (pg_get_functiondef), migrations afqe_ratings_fetch, afqe_people_history_alerts, afqe_alerts_run.

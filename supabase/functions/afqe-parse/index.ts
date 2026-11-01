@@ -1,13 +1,14 @@
 // Market-scanner parser. pg_cron calls this every 10 minutes (header x-afqe-token).
 // It takes compacted Screener/BSE payloads queued by public.afqe_scan_batch, parses them with core.js
-// (generated from index.html, so identical to the page), and stores one engine row per company.
+// (generated from index.html, so identical to the page), and stores one engine row per company plus a
+// history replay (each past financial year scored as of 4 months after it closed, with what happened next).
 // Deploy with verify_jwt = false. After regenerating core.js, push, then bump CORE_URL to the new commit.
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { DOMParser } from "npm:linkedom@0.18.5";
 
 // core.js is imported statically below, pinned to a commit SHA
 // static import (bundled at deploy time), pinned to a commit — Supabase's runtime doesn't allow dynamic remote imports
-import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/c2c488bd28c345cf464684266de4e651b7ffb361/supabase/functions/afqe-parse/core.js";
+import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/944b34691bb5ff44b1b4be374e2f7be78081c922/supabase/functions/afqe-parse/core.js";
 (globalThis as any).DOMParser = DOMParser;
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
@@ -32,7 +33,9 @@ Deno.serve(async (req) => {
       delete o._prices;
       o._about = String(o._about || "").slice(0, 1500);
       for (const k of Object.keys(o)) if (typeof o[k] === "number" && !isFinite(o[k])) o[k] = null;
-      out.push({ symbol: sym, row: o, checks, issues: hs.issues.concat(xi), crit: [], err: null });
+      let panel: any[] = [];
+      try { panel = core.panelRows(j, String(j.symbol || sym).toUpperCase(), o.sector_type); } catch (_) { panel = []; }
+      out.push({ symbol: sym, row: o, checks, issues: hs.issues.concat(xi), crit: [], err: null, panel });
     } catch (e) {
       out.push({ symbol: sym, row: null, issues: [], crit: [], err: String((e as Error)?.message || e).slice(0, 200) });
     }

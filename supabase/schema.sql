@@ -43,6 +43,7 @@ begin
     when 'sched_s' then 'https://www.screener.in/api/company/'||d||'/schedules/?parent=Expenses&section=profit-loss'
     when 'schedoa_c' then 'https://www.screener.in/api/company/'||d||'/schedules/?parent=Other+Assets&section=balance-sheet&consolidated='
     when 'schedoa_s' then 'https://www.screener.in/api/company/'||d||'/schedules/?parent=Other+Assets&section=balance-sheet'
+    when 'screener_find' then 'https://www.screener.in/api/company/search/?q='||replace(trim(regexp_replace(lower(coalesce(sym,'')),'[^a-z0-9&. -]','','g')),' ','+')||'&v=3'
     when 'yahoo' then 'https://query1.finance.yahoo.com/v8/finance/chart/'||s||'.NS?range=10y&interval=1mo'
     when 'bse_find' then 'https://api.bseindia.com/BseIndiaAPI/api/PeerSmartSearch/w?Type=SS&text='||s
     when 'bse_header' then 'https://api.bseindia.com/BseIndiaAPI/api/ComHeadernew/w?quotetype=EQ&scripcode='||d||'&seriesid='
@@ -73,9 +74,19 @@ end $$;
 -- Screener page (consolidated, falling back to standalone) + schedules + Yahoo prices, compacted (~25 KB per stock).
 create or replace function public.afqe_screener(sym text) returns jsonb
 language plpgsql security definer set search_path = public, extensions, afqe as $$
-declare oa jsonb; r jsonb; b text; cons boolean := true; cid text; sch jsonb; y jsonb; yb jsonb; sh text;
+declare fs jsonb; slug text; q text := sym; oa jsonb; r jsonb; b text; cons boolean := true; cid text; sch jsonb; y jsonb; yb jsonb; sh text;
 begin
+  -- accepts an NSE symbol or a company name; a 404 on the symbol page falls back to Screener's search
+  sym := upper(regexp_replace(coalesce(q,''),'[^A-Za-z0-9&-]','','g'));
   r := public.afqe_fetch('screener_c', sym);
+  if (r->>'status')::int = 404 then
+    fs := public.afqe_fetch('screener_find', q, 720);
+    if (fs->>'status')::int = 200 then
+      slug := (regexp_match(fs->>'body', '"url":\s*"/company/([^/"]+)/'))[1];
+      if slug is not null then sym := upper(slug); r := public.afqe_fetch('screener_c', sym); end if;
+    end if;
+    if slug is null then return jsonb_build_object('error','No company found on Screener for "'||q||'". Try the NSE symbol.'); end if;
+  end if;
   if (r->>'status')::int <> 200 then return jsonb_build_object('error','Screener returned '||coalesce(r->>'status','?')||' for '||sym); end if;
   b := r->>'body';
   if position('<table' in coalesce(afqe.section(b,'profit-loss'),'')) = 0 then

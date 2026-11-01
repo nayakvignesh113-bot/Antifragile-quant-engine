@@ -23,7 +23,7 @@ A screening and position-sizing tool for Indian listed equities, built on Sajal 
 
 ## Data
 
-Type NSE symbols and press **Fetch**:
+Type NSE symbols or company names, comma-separated, and press **Fetch**:
 
 | Source | What |
 |---|---|

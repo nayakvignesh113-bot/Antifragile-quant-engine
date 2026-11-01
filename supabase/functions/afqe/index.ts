@@ -1,5 +1,5 @@
 // Antifragile Quant Engine data endpoint.
-// GET /functions/v1/afqe?kind=screener|exchange&sym=LAURUSLABS   header: x-afqe-token
+// GET /functions/v1/afqe?kind=screener|exchange&sym=LAURUSLABS (or a company name)   header: x-afqe-token
 // The token is checked inside Postgres (only its SHA-256 is stored); fetching and caching happen in SQL (public.afqe_api).
 // Deploy with verify_jwt = false (the function does its own token check).
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -16,7 +16,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   const url = new URL(req.url);
   const kind = url.searchParams.get("kind") ?? "";
-  const sym = (url.searchParams.get("sym") ?? "").toUpperCase().replace(/[^A-Z0-9&-]/g, "");
+  // symbol or company name ("Deepak Nitrite"); names are resolved via Screener search in SQL
+  const sym = (url.searchParams.get("sym") ?? "").replace(/[^A-Za-z0-9&. -]/g, "").replace(/\s+/g, " ").trim().slice(0, 60);
   const token = req.headers.get("x-afqe-token") ?? "";
   if (!sym || !/^(screener|exchange)$/.test(kind)) return json({ error: "need kind=screener|exchange and sym" }, 400);
   if (!token) return json({ error: "missing token", code: "bad_token" }, 401);

@@ -8,7 +8,7 @@ import { DOMParser } from "npm:linkedom@0.18.5";
 
 // core.js is imported statically below, pinned to a commit SHA
 // static import (bundled at deploy time), pinned to a commit — Supabase's runtime doesn't allow dynamic remote imports
-import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/b81d8789bb73b861dae062042c9bd9947e03bc31/supabase/functions/afqe-parse/core.js";
+import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/b31ceb47143c3c33493fa4e16fec96bfd1b4918d/supabase/functions/afqe-parse/core.js";
 (globalThis as any).DOMParser = DOMParser;
 
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });

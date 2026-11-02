@@ -496,7 +496,7 @@ return r}
 // History replay: score each past financial year as of 4 months after it closed (annual results public),
 // using only data available then, and attach what happened next (returns, sales and EBIT growth).
 const rd = (x, k = 3) => (fin(x) ? Math.round(x * 10 ** k) / 10 ** k : null);
-const GCODE = [[/^Financial company/, 'fin'], [/^Company debt/, 'debt'], [/^Interest cover/, 'cov'], [/^Owner debt/, 'pledge'], [/^Negative CFO in/, 'cfo'], [/dilution/, 'dil'], [/^Auditor/, 'aud'], [/^P/S .* AND/, 'psdep'], [/^P/S/, 'ps'], [/^Negative CFO with/, 'cfodep'], [/red flags/, 'flags'], [/^Governance/, 'gov'], [/^Negative divergence/, 'negdiv']];
+const GCODE = [[/^Financial company/, 'fin'], [/^Company debt/, 'debt'], [/^Interest cover/, 'cov'], [/^Owner debt/, 'pledge'], [/^Negative CFO in/, 'cfo'], [/dilution/, 'dil'], [/^Auditor/, 'aud'], [/^P\/S .* AND/, 'psdep'], [/^P\/S/, 'ps'], [/^Negative CFO with/, 'cfodep'], [/red flags/, 'flags'], [/^Governance/, 'gov'], [/^Negative divergence/, 'negdiv']];
 const gcode = (g) => { for (const [re, c] of GCODE) if (re.test(g)) return c; return 'other'; };
 function panelRows(j, sym, st) {
   const out = [];

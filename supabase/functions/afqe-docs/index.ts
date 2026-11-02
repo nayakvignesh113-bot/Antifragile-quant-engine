@@ -6,7 +6,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { DOMParser } from "npm:linkedom@0.18.5";
 import { extractText, getDocumentProxy } from "npm:unpdf@0.12.1";
-import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/SHA/supabase/functions/afqe-parse/core.js";
+import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/6d9f4825b323c6839e0b50c23f28270d4c7c9c35/supabase/functions/afqe-parse/core.js";
 (globalThis as any).DOMParser = DOMParser;
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       for (const d of docs) { try { read.push({ ...d, text: await pdfText(d.u) }); } catch (e) { read.push({ ...d, text: "", err: String((e as Error)?.message || e).slice(0, 120) }); } }
       const res: any = core.parseDocs(read);
       const { auto, ...digest } = res;
-      items.push({ symbol: it.symbol, auto, digest: [digest], used: { latest, docs: docs.map((d) => d.u) }, err: read.filter((d) => d.err).map((d) => d.label + ": " + d.err).join("; ") || null });
+      items.push({ symbol: it.symbol, auto, digest: [digest], used: read.every((d) => d.err) ? null : { latest, docs: docs.map((d) => d.u) }, err: read.filter((d) => d.err).map((d) => d.label + ": " + d.err).join("; ") || null });
     } catch (e) { items.push({ symbol: it.symbol, err: String((e as Error)?.message || e).slice(0, 200) }); }
   }
   if (!items.length) return json({ done: 0 });

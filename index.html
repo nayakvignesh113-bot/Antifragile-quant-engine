@@ -424,7 +424,7 @@ function segName(pre){const ac=pre.match(/\(([A-Z][A-Za-z&]{1,9})\)\s*(?:busines
 let n=pre.replace(/\s*(?:business|vertical|segment|division|product line|portfolio)s?\s*$/i,'').replace(/[,()]/g,' ').replace(/\s+/g,' ').trim();const w=n.split(' ').filter(x=>/^[A-Z]/.test(x));return w.slice(-3).join(' ')}
 function sentenceMix(text){const out=[];const SS=docSentences(text);for(let si=0;si<SS.length;si++){const s=SS[si];MIXRE.lastIndex=0;let m;while((m=MIXRE.exec(s))){const pct=+m[2];if(!(pct>0&&pct<=100))continue;const pre=m[1];
 if(/\b(sector|industr|end[- ]use|region|geograph|export|domestic|customer|client|countr)\w*\b/i.test(pre.slice(-50)))continue;
-const group=/\b(two|three|these|both|combined|together)\b/i.test(pre);const names=group?acr(s.slice(0,m.index+m[0].length)).slice(-3):[segName(pre)];if(!group&&(!names.length||!names[0]))continue;
+const pair=pre.match(/\b([A-Z][A-Z&]{1,7})\s*(?:,|and|&)\s*([A-Z][A-Z&]{1,7})(?:\s*(?:,|and|&)\s*([A-Z][A-Z&]{1,7}))?\s*(?:business(?:es)?|verticals?|segments?|divisions?)?\s*$/);const group=!!pair||/\b(two|three|these|both|combined|together)\b/i.test(pre);const names=pair?pair.slice(1).filter(Boolean):group?acr(s.slice(0,m.index+m[0].length)).slice(-3):[segName(pre)];if(!group&&(!names.length||!names[0]))continue;
 if(group&&names.length<2){const prev=[...new Set(acr(s).concat(acr(SS[si-1]||''),acr(SS[si-2]||'')))];if(prev.length>=2)names.splice(0,names.length,...prev.slice(0,3))}
 out.push({names:[...new Set(names)],pct,group,legacy:/\b(modest|re-?purpos|declin|legacy|traditional|base business|commodit|mature|slow)\w*/i.test(s),growthy:/\b(high[- ]value|higher[- ](?:growth|value|margin)|new|emerging|specialty|value[- ]added)\b/i.test(s),s:s.slice(0,400)})}}return out}
 function tableMix(text){const t=String(text||'').replace(/\s+/g,' ');const re=/([A-Za-z][A-Za-z&\/\- ]{0,28}?)\s?[:\-–]?\s?(\d{1,2}(?:\.\d{1,2})?)\s?%/g;const hits=[];let m;while((m=re.exec(t))){const nm=m[1].replace(/#/g,'').trim().split(' ').slice(-3).join(' ');hits.push({name:nm,pct:+m[2],i:m.index,end:re.lastIndex})}
@@ -450,7 +450,7 @@ const delta=k=>k in O.m&&k in N.m?N.m[k].pct-O.m[k].pct:NaN;
 const risers=keys.filter(k=>delta(k)>=3),fallers=keys.filter(k=>delta(k)<=-3);
 const legacyK=[...new Set([...fallers,...keys.filter(k=>N.m[k].legacy)])];
 let eng=null;
-const grp=N.sent.filter(f=>f.group&&f.growthy).sort((a,b)=>b.pct-a.pct)[0];
+const grp=N.sent.filter(f=>f.group&&(f.growthy||f.names.length>=2)).sort((a,b)=>(/\b(over|more than|above|at least)\s+\d/i.test(a.s)?1:0)-(/\b(over|more than|above|at least)\s+\d/i.test(b.s)?1:0)||b.pct-a.pct)[0];
 if(risers.length){const ks=risers;eng={keys:ks,name:ks.map(k=>N.m[k].name).join(' + '),now:ks.reduce((a,k)=>a+N.m[k].pct,0),old:ks.reduce((a,k)=>a+O.m[k].pct,0),ev:N.m[ks[0]].src,evOld:O.m[ks[0]].src}}
 else if(legacyK.length&&okeys.length){const ks=okeys.filter(k=>!legacyK.includes(k));if(ks.length){const old=ks.reduce((a,k)=>a+O.m[k].pct,0);const legNow=legacyK.reduce((a,k)=>a+(N.m[k]?N.m[k].pct:0),0);const othOld=Object.keys(O.m).filter(k=>/^others?$/.test(k)).reduce((a,k)=>a+O.m[k].pct,0);
 const stated=grp&&ks.every(k=>grp.names.map(nk).includes(k))?grp:null;eng={keys:ks,name:ks.map(k=>O.m[k].name).join(' + '),now:stated?stated.pct:Math.max(0,100-legNow-othOld),old,ev:stated?{s:stated.s,doc:stated.doc}:N.m[legacyK[0]].src,evOld:O.m[ks[0]].src,derived:!stated}}}

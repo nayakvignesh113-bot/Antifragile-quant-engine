@@ -47,7 +47,7 @@ function panelRows(j, sym, st) {
   }
   return out;
 }
-export { screenerHealth, fromScreener, parseExchange, sectorFromIndustry, parseRating, panelRows, COLS, SECT };
+export { screenerHealth, fromScreener, parseExchange, sectorFromIndustry, parseRating, parseDocs, panelRows, COLS, SECT };
 `;
 fs.mkdirSync('supabase/functions/afqe-parse', { recursive: true });
 fs.writeFileSync('supabase/functions/afqe-parse/core.js', out);

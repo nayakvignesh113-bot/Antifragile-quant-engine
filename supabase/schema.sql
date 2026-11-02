@@ -203,3 +203,10 @@ grant all on afqe.universe, afqe.raw, afqe.rows, afqe.rows_hist to service_role;
 -- public.afqe_list_refresh()           : moves your list to the front of the scan queue each morning.
 -- Schedules: afqe-rating 7-57/10 * * * * · afqe-scan */10 (8 per run) · afqe-list-refresh 1 1 * * * · afqe-alerts 41 3 * * * (09:11 IST)
 -- Full definitions: see the live project (pg_get_functiondef), migrations afqe_ratings_fetch, afqe_people_history_alerts, afqe_alerts_run.
+
+-- ===================== Transformation inputs from documents (Nov 2026) =====================
+-- afqe.docs : per symbol — Screener concall links (presentations, transcripts), automatic transformation inputs,
+--             digest (evidence sentences, segment shares now / ~2 yrs ago, legacy line, new-product mentions), docs used.
+-- afqe.doc_links(html) parses Screener's Concalls list; afqe_screener stores links and returns 'docs'.
+-- public.afqe_docs_queue/_store: queue for the afqe-docs edge function (your list first, then transformation signals).
+-- Schedule: afqe-docs 2-57/5 * * * * (one company per run).

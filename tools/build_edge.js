@@ -42,7 +42,7 @@ function panelRows(j, sym, st) {
       b: r.bucket, stage: r.stage, div: r.div, gates: r.gates.length, crowd: r.crowd,
       f: { roce: rd(o.roce, 1), dRoce: rd(r.dRoce, 1), ps: rd(r.ps, 2), evE: rd(r.evE, 1), conv: rd(r.conv, 2), ndE: rd(r.ndE, 2), dGM: rd(r.dGM, 1), dEM: rd(r.dEM, 1),
         iroce: rd(o.incr_roce_5y, 1), payoff: rd(o.capex_payoff, 2), capGap: fin(e.impliedCap) && fin(r.capYrs) ? Math.min(e.impliedCap, 80) - r.capYrs : null,
-        implied: rd(e.implied), gest: rd(e.gest), pBeat: rd(e.pBeat), alloc: rd(r.alloc, 2), rg5: rd(o.rev_cagr_5y, 1) },
+        implied: rd(e.implied), gest: rd(e.gest), pBeat: rd(e.pBeat), alloc: rd(r.alloc, 2), rg5: rd(o.rev_cagr_5y, 1), txP: rd(r.txP), txPh: r.txPh },
       fwd1: rd(o._fwd1), fwd3: rd(o._fwd3), fs3: rd(o._fs3), fs5: rd(o._fs5), fe3: rd(o._fe3) });
   }
   return out;

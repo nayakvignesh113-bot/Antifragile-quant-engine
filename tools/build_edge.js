@@ -28,7 +28,7 @@ ${scoring}
 // History replay: score each past financial year as of 4 months after it closed (annual results public),
 // using only data available then, and attach what happened next (returns, sales and EBIT growth).
 const rd = (x, k = 3) => (fin(x) ? Math.round(x * 10 ** k) / 10 ** k : null);
-const GCODE = [[/^Financial company/, 'fin'], [/^Company debt/, 'debt'], [/^Interest cover/, 'cov'], [/^Owner debt/, 'pledge'], [/^Negative CFO in/, 'cfo'], [/dilution/, 'dil'], [/^Auditor/, 'aud'], [/^P\\/S .* AND/, 'psdep'], [/^P\\/S/, 'ps'], [/^Negative CFO with/, 'cfodep'], [/red flags/, 'flags'], [/^Governance/, 'gov'], [/^Negative divergence/, 'negdiv']];
+const GCODE = [[/^Other people/, 'opm'], [/^Financial company/, 'fin'], [/^Company debt/, 'debt'], [/^Interest cover/, 'cov'], [/^Owner debt/, 'pledge'], [/^Negative CFO in/, 'cfo'], [/dilution/, 'dil'], [/^Auditor/, 'aud'], [/^P\\/S .* AND/, 'psdep'], [/^P\\/S/, 'ps'], [/^Negative CFO with/, 'cfodep'], [/red flags/, 'flags'], [/^Governance/, 'gov'], [/^Negative divergence/, 'negdiv']];
 const gcode = (g) => { for (const [re, c] of GCODE) if (re.test(g)) return c; return 'other'; };
 function panelRows(j, sym, st) {
   const out = [];
@@ -41,7 +41,7 @@ function panelRows(j, sym, st) {
     const e = r.exp || {};
     out.push({ fy: o._fy, asof: o._asof, sec: st, rev: Math.round(o.revenue_cr), mcap: Math.round(o.mcap_cr),
       S: rd(r.S, 2), R: rd(r.R, 2), T: rd(r.T, 2), O: rd(r.O, 2), M: rd(r.M, 2), V: rd(r.V, 2), nmos: rd(r.nmos, 2), opt: rd(r.opt, 2),
-      b: r.bucket, stage: r.stage, div: r.div, gates: r.gates.length, gc: r.gates.map(gcode), crowd: r.crowd,
+      b: r.bucket, stage: r.stage, div: r.div, gates: r.gates.length, gc: r.gates.concat(r.fragile || []).map(gcode), lumpy: r.lumpy ? 1 : 0, crowd: r.crowd,
       f: { roce: rd(o.roce, 1), dRoce: rd(r.dRoce, 1), ps: rd(r.ps, 2), evE: rd(r.evE, 1), conv: rd(r.conv, 2), ndE: rd(r.ndE, 2), dGM: rd(r.dGM, 1), dEM: rd(r.dEM, 1),
         iroce: rd(o.incr_roce_5y, 1), payoff: rd(o.capex_payoff, 2), capGap: fin(e.impliedCap) && fin(r.capYrs) ? Math.min(e.impliedCap, 80) - r.capYrs : null,
         implied: rd(e.implied), gest: rd(e.gest), pBeat: rd(e.pBeat), alloc: rd(r.alloc, 2), rg5: rd(o.rev_cagr_5y, 1), txP: rd(r.txP), txPh: r.txPh },

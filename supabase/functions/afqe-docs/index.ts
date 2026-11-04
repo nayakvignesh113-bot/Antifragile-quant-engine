@@ -6,7 +6,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { DOMParser } from "npm:linkedom@0.18.5";
 import { extractText, getDocumentProxy } from "npm:unpdf@0.12.1";
-import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/a0e88d1ad1ca65cae1911712cf4cdb5dbc9dff2d/supabase/functions/afqe-parse/core.js";
+import * as core from "https://raw.githubusercontent.com/nayakvignesh113-bot/Antifragile-quant-engine/3925d696ed1f5c410c154b27318287524d1b061c/supabase/functions/afqe-parse/core.js";
 (globalThis as any).DOMParser = DOMParser;
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
